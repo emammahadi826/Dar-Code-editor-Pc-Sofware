@@ -1,4 +1,4 @@
-# Dar Studio
+# Dar Studio — Made by Mahadi
 
 <p align="center">
   <img src="Icon/Main%20icon.png" alt="Dar Studio" width="400"/>
