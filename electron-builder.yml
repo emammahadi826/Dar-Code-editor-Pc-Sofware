@@ -1,0 +1,23 @@
+appId: com.darstudio.app
+productName: Dar Studio
+copyright: Copyright © 2026
+
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: portable
+      arch: [x64]
+  icon: Icon/icon-256.ico
+  artifactName: DarStudio-Setup-${version}.exe
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Dar Studio
+
+directories:
+  output: dist-electron
+  buildResources: resources

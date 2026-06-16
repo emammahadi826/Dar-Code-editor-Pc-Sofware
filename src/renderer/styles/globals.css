@@ -1,0 +1,92 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-base: #0d0d0d;
+  --bg-surface: #111111;
+  --bg-elevated: #171717;
+  --bg-overlay: #1e1e1e;
+  --bg-hover: #2a2a2a;
+  --bg-active: #37373d;
+  --bg-input: #3c3c3c;
+
+  --activitybar-bg: #0d0d0d;
+  --activitybar-icon: #858585;
+  --activitybar-icon-active: #ffffff;
+  --activitybar-badge-bg: #007acc;
+  --activitybar-badge-text: #ffffff;
+
+  --sidepanel-bg: #111111;
+  --sidepanel-border: #2d2d2d;
+  --sidepanel-header: #bbbbbb;
+  --sidepanel-text: #cccccc;
+  --sidepanel-hover: #2a2d2e;
+  --sidepanel-active: #37373d;
+
+  --statusbar-bg: #007acc;
+  --statusbar-text: #ffffff;
+  --statusbar-hover: #1b8cdb;
+
+  --titlebar-bg: #0d0d0d;
+  --titlebar-text: #cccccc;
+
+  --editor-bg: #1e1e1e;
+  --editor-text: #d4d4d4;
+  --editor-highlight: #2a2d2e;
+  --editor-selection: #264f78;
+
+  --panel-bg: #1e1e1e;
+  --panel-border: #2d2d2d;
+  --panel-tab-text: #9d9d9d;
+  --panel-tab-active: #ffffff;
+
+  --accent-blue: #007acc;
+  --accent-blue-h: #1b8cdb;
+  --accent-green: #4ec9b0;
+  --accent-yellow: #dcdcaa;
+  --accent-orange: #ce9178;
+  --accent-red: #f44747;
+  --accent-purple: #c586c0;
+
+  --font-ui: 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'Cascadia Code', 'JetBrains Mono', 'Consolas', monospace;
+  --size-xs: 11px;
+  --size-sm: 12px;
+  --size-md: 13px;
+  --size-lg: 14px;
+
+  --border: #2d2d2d;
+  --border-focus: #007acc;
+
+  --scrollbar-thumb: #424242;
+  --scrollbar-track: transparent;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: #424242; border-radius: 4px; }
+*::-webkit-scrollbar-thumb:hover { background: #6b6b6b; }
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-ui);
+  font-size: var(--size-md);
+  background: var(--bg-base);
+  color: var(--editor-text);
+  overflow: hidden;
+  user-select: none;
+}
+
+#root {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}

@@ -1,0 +1,27 @@
+import { contextBridge, ipcRenderer } from 'electron'
+
+contextBridge.exposeInMainWorld('electron', {
+  // Window controls
+  minimize: () => ipcRenderer.send('win:minimize'),
+  maximize: () => ipcRenderer.send('win:maximize'),
+  close: () => ipcRenderer.send('win:close'),
+
+  // File system
+  readDir: (dirPath: string) => ipcRenderer.invoke('fs:readDir', dirPath),
+  readFile: (filePath: string) => ipcRenderer.invoke('fs:readFile', filePath),
+  writeFile: (filePath: string, content: string) => ipcRenderer.invoke('fs:writeFile', filePath, content),
+  createFile: (filePath: string) => ipcRenderer.invoke('fs:createFile', filePath),
+  createDir: (dirPath: string) => ipcRenderer.invoke('fs:createDir', dirPath),
+  delete: (targetPath: string) => ipcRenderer.invoke('fs:delete', targetPath),
+  rename: (oldPath: string, newPath: string) => ipcRenderer.invoke('fs:rename', oldPath, newPath),
+  exists: (targetPath: string) => ipcRenderer.invoke('fs:exists', targetPath),
+
+  // Dialogs
+  openFile: () => ipcRenderer.invoke('dialog:openFile'),
+  openFolder: () => ipcRenderer.invoke('dialog:openFolder'),
+  saveFile: (defaultPath?: string) => ipcRenderer.invoke('dialog:saveFile', defaultPath),
+
+  // Search
+  searchInFiles: (p: { rootPath: string; query: string; caseSensitive?: boolean; maxResults?: number }) =>
+    ipcRenderer.invoke('search:inFiles', p),
+})
