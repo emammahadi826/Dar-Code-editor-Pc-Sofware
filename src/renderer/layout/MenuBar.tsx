@@ -1,0 +1,312 @@
+import React, { useState, useRef, useEffect, useCallback } from 'react'
+import { useAppStore } from '../store/appStore'
+import { useSettingsStore } from '../store/settingsStore'
+
+interface MenuItemDef {
+  label: string
+  shortcut?: string
+  action?: () => void
+  separator?: boolean
+  disabled?: boolean
+}
+
+interface MenuGroupDef {
+  label: string
+  items: MenuItemDef[]
+}
+
+function triggerKey(key: string, ctrl = true, shift = false, alt = false) {
+  window.dispatchEvent(new KeyboardEvent('keydown', {
+    key,
+    code: key.length === 1 ? `Key${key.toUpperCase()}` : key,
+    ctrlKey: ctrl,
+    shiftKey: shift,
+    altKey: alt,
+    metaKey: false,
+    bubbles: true,
+    cancelable: true,
+  }))
+}
+
+export function MenuBar() {
+  const [openMenu, setOpenMenu] = useState<string | null>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!openMenu) return
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpenMenu(null)
+      }
+    }
+    const id = setTimeout(() => document.addEventListener('mousedown', handler), 0)
+    return () => {
+      clearTimeout(id)
+      document.removeEventListener('mousedown', handler)
+    }
+  }, [openMenu])
+
+  const doAction = (action?: () => void) => {
+    action?.()
+    setOpenMenu(null)
+  }
+
+  const menus: MenuGroupDef[] = [
+    {
+      label: 'File',
+      items: [
+        {
+          label: 'New File', shortcut: 'Ctrl+N',
+          action: () => {
+            const name = window.prompt('Enter file name:')
+            if (!name) return
+            const root = useAppStore.getState().rootPath
+            if (!root) return alert('Open a folder first')
+            window.electron?.createFile(root + '\\' + name).then(() => {
+              useAppStore.getState().addOutputLog(`[FS] Created: ${name}`)
+            }).catch(() => alert('Failed to create file'))
+          },
+        },
+        {
+          label: 'Open File...', shortcut: 'Ctrl+O',
+          action: () => window.electron?.openFile(),
+        },
+        {
+          label: 'Open Folder...', shortcut: 'Ctrl+K Ctrl+O',
+          action: () => window.electron?.openFolder(),
+        },
+        { separator: true },
+        {
+          label: 'Save', shortcut: 'Ctrl+S',
+          action: () => {
+            const s = useAppStore.getState()
+            if (!s.activeTab) return
+            const tab = s.openTabs.find((t) => t.path === s.activeTab)
+            if (tab) {
+              window.electron?.writeFile(tab.path, tab.content).then((ok) => {
+                if (ok) { s.markTabClean(tab.path); s.addOutputLog(`[FS] Saved: ${tab.name}`) }
+              })
+            }
+          },
+        },
+        {
+          label: 'Save As...', shortcut: 'Ctrl+Shift+S',
+          action: () => {
+            const tab = useAppStore.getState().openTabs.find((t) => t.path === useAppStore.getState().activeTab)
+            if (tab) window.electron?.saveFile(tab.path)
+          },
+        },
+        { separator: true },
+        {
+          label: 'Close', shortcut: 'Ctrl+W',
+          action: () => {
+            const s = useAppStore.getState()
+            if (s.activeTab) s.closeTab(s.activeTab)
+          },
+        },
+        {
+          label: 'Close All',
+          action: () => {
+            const s = useAppStore.getState()
+            s.openTabs.forEach((t) => s.closeTab(t.path))
+          },
+        },
+      ],
+    },
+    {
+      label: 'Edit',
+      items: [
+        { label: 'Undo', shortcut: 'Ctrl+Z', action: () => triggerKey('z') },
+        { label: 'Redo', shortcut: 'Ctrl+Shift+Z', action: () => triggerKey('z', true, true) },
+        { separator: true },
+        { label: 'Cut', shortcut: 'Ctrl+X', action: () => triggerKey('x') },
+        { label: 'Copy', shortcut: 'Ctrl+C', action: () => triggerKey('c') },
+        { label: 'Paste', shortcut: 'Ctrl+V', action: () => triggerKey('v') },
+        { separator: true },
+        {
+          label: 'Find', shortcut: 'Ctrl+F',
+          action: () => {
+            useAppStore.getState().setActiveModule('Search')
+            useAppStore.getState().toggleSidePanel()
+          },
+        },
+        {
+          label: 'Replace', shortcut: 'Ctrl+H',
+          action: () => {
+            useAppStore.getState().setActiveModule('Search')
+            useAppStore.getState().toggleSidePanel()
+          },
+        },
+      ],
+    },
+    {
+      label: 'Selection',
+      items: [
+        { label: 'Select All', shortcut: 'Ctrl+A', action: () => triggerKey('a') },
+      ],
+    },
+    {
+      label: 'View',
+      items: [
+        {
+          label: 'Command Palette', shortcut: 'Ctrl+Shift+P',
+          action: () => {
+            useAppStore.getState().addOutputLog('[View] Command Palette coming soon')
+          },
+        },
+        { separator: true },
+        {
+          label: 'Toggle Sidebar', shortcut: 'Ctrl+B',
+          action: () => useAppStore.getState().toggleSidePanel(),
+        },
+        {
+          label: 'Toggle Panel', shortcut: 'Ctrl+J',
+          action: () => useAppStore.getState().toggleBottomPanel(),
+        },
+        { separator: true },
+        {
+          label: 'Zoom In', shortcut: 'Ctrl+=',
+          action: () => {
+            const { fontSize, setFontSize } = useSettingsStore.getState()
+            setFontSize(Math.min(32, fontSize + 2))
+          },
+        },
+        {
+          label: 'Zoom Out', shortcut: 'Ctrl+-',
+          action: () => {
+            const { fontSize, setFontSize } = useSettingsStore.getState()
+            setFontSize(Math.max(8, fontSize - 2))
+          },
+        },
+        {
+          label: 'Reset Zoom',
+          action: () => useSettingsStore.getState().setFontSize(14),
+        },
+      ],
+    },
+    {
+      label: 'Go',
+      items: [
+        {
+          label: 'Go to Line...', shortcut: 'Ctrl+G',
+          action: () => {
+            const line = window.prompt('Enter line number:')
+            if (line) {
+              const n = parseInt(line, 10)
+              if (!isNaN(n)) useAppStore.getState().setCursor(n, 1)
+            }
+          },
+        },
+        {
+          label: 'Go to File...', shortcut: 'Ctrl+P',
+          action: () => {
+            useAppStore.getState().setActiveModule('Search')
+            useAppStore.getState().toggleSidePanel()
+          },
+        },
+      ],
+    },
+    {
+      label: 'Run',
+      items: [
+        {
+          label: 'Run Code', shortcut: 'F5',
+          action: () => useAppStore.getState().addOutputLog('[Run] Run feature coming soon'),
+        },
+        {
+          label: 'Stop',
+          action: () => {
+            const state = useAppStore.getState()
+            state.addOutputLog('[Run] Stopped execution')
+            state.setBottomPanelTab('OUTPUT')
+          },
+        },
+      ],
+    },
+    {
+      label: 'Terminal',
+      items: [
+        {
+          label: 'New Terminal', shortcut: 'Ctrl+`',
+          action: () => {
+            useAppStore.getState().setBottomPanelTab('TERMINAL')
+            useAppStore.getState().toggleBottomPanel()
+            window.electron?.terminal.create('powershell.exe').catch(() => {})
+          },
+        },
+        {
+          label: 'Toggle Terminal', shortcut: 'Ctrl+`',
+          action: () => useAppStore.getState().toggleBottomPanel(),
+        },
+      ],
+    },
+    {
+      label: 'Help',
+      items: [
+        {
+          label: 'About Dar Studio',
+          action: () => {
+            alert('Dar Studio v1.0.0\nA modern code editor built with Electron + React + Monaco\n\nMade by Mahadi')
+          },
+        },
+        {
+          label: 'Documentation',
+          action: () => {
+            useAppStore.getState().addOutputLog('[Help] Documentation: https://github.com/emammahadi826')
+          },
+        },
+      ],
+    },
+  ]
+
+  return (
+    <div
+      ref={menuRef}
+      className="flex items-center h-full"
+      style={{ WebkitAppRegion: 'no-drag' } as any}
+    >
+      {menus.map((menu) => (
+        <div key={menu.label} className="relative h-full flex items-center">
+          <button
+            onClick={() => setOpenMenu(openMenu === menu.label ? null : menu.label)}
+            onMouseEnter={() => {
+              if (openMenu) setOpenMenu(menu.label)
+            }}
+            className={`px-3 h-full text-sm transition-colors select-none ${
+              openMenu === menu.label
+                ? 'bg-[#2a2d2e] text-white'
+                : 'text-titlebar-text hover:text-white hover:bg-hover'
+            }`}
+          >
+            {menu.label}
+          </button>
+          {openMenu === menu.label && (
+            <div
+              className="absolute top-full left-0 min-w-[240px] bg-[#252526] border border-[#3c3c3c] rounded shadow-2xl py-1 z-[100]"
+              style={{ WebkitAppRegion: 'no-drag' } as any}
+            >
+              {menu.items.map((item, i) => {
+                if (item.separator) {
+                  return <div key={i} className="h-px bg-[#3c3c3c] mx-2 my-1" />
+                }
+                return (
+                  <button
+                    key={i}
+                    onClick={() => doAction(item.action)}
+                    disabled={item.disabled}
+                    className="w-full flex items-center justify-between px-4 py-1.5 text-sm text-sidepanel-text hover:bg-[#094771] hover:text-white disabled:opacity-40 select-none"
+                  >
+                    <span>{item.label}</span>
+                    {item.shortcut && (
+                      <span className="text-xs opacity-50 ml-8">{item.shortcut}</span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
