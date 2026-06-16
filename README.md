@@ -2,6 +2,14 @@
 
 Dar Studio — A modern, lightweight code editor for Windows built with Electron, React, and Monaco Editor (same engine as VS Code).
 
+## Screenshots
+
+![Dar Studio - File Explorer & Editor](Screen%20Shorts/Screenshot%202026-06-16%20073110.png)
+*File Explorer with multi-tab editor and syntax highlighting*
+
+![Dar Studio - Terminal Panel](Screen%20Shorts/Screenshot%202026-06-16%20073253.png)
+*Integrated terminal panel and editor*
+
 ## Features
 
 - **File Explorer** — Tree view with folder navigation, create/rename/delete files
