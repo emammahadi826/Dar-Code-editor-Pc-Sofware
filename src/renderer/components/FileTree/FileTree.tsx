@@ -131,7 +131,7 @@ export function FileTree({ rootPath, onFileSelect }: FileTreeProps) {
         </div>
       </div>
 
-      {creating && (
+      {creating && creating.parentPath === rootPath && (
         <div className="flex items-center gap-1.5 px-3 py-1.5" style={{ paddingLeft: '10px' }}>
           <Icon
             icon={creating.type === 'folder' ? 'vscode-icons:default-folder' : 'vscode-icons:default-file'}
@@ -167,6 +167,9 @@ export function FileTree({ rootPath, onFileSelect }: FileTreeProps) {
           onCreateFolder={handleCreateFolder}
           onRename={handleRename}
           onDelete={handleDelete}
+          creating={creating}
+          onCreateSubmit={handleCreateSubmit}
+          onCancelCreate={() => setCreating(null)}
         />
       ))}
 

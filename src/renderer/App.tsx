@@ -37,6 +37,21 @@ export default function App() {
     else bottomRef.current.collapse()
   }, [bottomPanelOpen])
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'f') {
+        e.preventDefault()
+        const store = useAppStore.getState()
+        if (store.activeModule !== 'Search') {
+          store.setActiveModule('Search')
+          if (!store.sidePanelOpen) store.toggleSidePanel()
+        }
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
   return (
     <div className="h-screen flex flex-col bg-base">
       <TitleBar />

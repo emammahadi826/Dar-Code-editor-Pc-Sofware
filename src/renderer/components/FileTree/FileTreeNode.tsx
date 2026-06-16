@@ -14,10 +14,12 @@ interface FileTreeNodeProps {
   onCreateFolder: (parentPath: string) => void
   onRename: (path: string, name: string) => void
   onDelete: (path: string) => void
+  creating: { parentPath: string; type: 'file' | 'folder' } | null
+  onCreateSubmit: (name: string) => void
+  onCancelCreate: () => void
 }
 
 const extIconMap: Record<string, string> = {
-  // Scripts & code
   js: 'vscode-icons:file-type-js', jsx: 'vscode-icons:file-type-reactjs',
   ts: 'vscode-icons:file-type-typescript', tsx: 'vscode-icons:file-type-reactts',
   mjs: 'vscode-icons:file-type-js', cjs: 'vscode-icons:file-type-js',
@@ -27,57 +29,43 @@ const extIconMap: Record<string, string> = {
   scala: 'vscode-icons:file-type-scala',
   php: 'vscode-icons:file-type-php', swift: 'vscode-icons:file-type-swift',
   dart: 'vscode-icons:file-type-dart',
-  // Web
   html: 'vscode-icons:file-type-html', htm: 'vscode-icons:file-type-html',
   css: 'vscode-icons:file-type-css', scss: 'vscode-icons:file-type-scss',
   less: 'vscode-icons:file-type-less',
-  // Config & data
   json: 'vscode-icons:file-type-json', xml: 'vscode-icons:file-type-xml',
   yaml: 'vscode-icons:file-type-yaml', yml: 'vscode-icons:file-type-yaml',
   toml: 'vscode-icons:file-type-toml', ini: 'vscode-icons:file-type-config',
   cfg: 'vscode-icons:file-type-config', conf: 'vscode-icons:file-type-config',
   env: 'vscode-icons:file-type-dotenv',
-  // Documentation
   md: 'vscode-icons:file-type-markdown', mdx: 'vscode-icons:file-type-markdown',
   rst: 'vscode-icons:file-type-rst',
-  // Database
   sql: 'vscode-icons:file-type-sql', db: 'vscode-icons:file-type-db',
   sqlite: 'vscode-icons:file-type-sqlite',
-  // Shell & scripts
   sh: 'vscode-icons:file-type-shell', bash: 'vscode-icons:file-type-shell',
   zsh: 'vscode-icons:file-type-shell',
   bat: 'vscode-icons:file-type-batch', cmd: 'vscode-icons:file-type-batch',
   ps1: 'vscode-icons:file-type-powershell',
-  // Images
   png: 'vscode-icons:file-type-image', jpg: 'vscode-icons:file-type-image',
   jpeg: 'vscode-icons:file-type-image', gif: 'vscode-icons:file-type-image',
   svg: 'vscode-icons:file-type-svg', ico: 'vscode-icons:file-type-image',
   webp: 'vscode-icons:file-type-image', bmp: 'vscode-icons:file-type-image',
-  // Documents
   pdf: 'vscode-icons:file-type-pdf',
-  // Archives
   zip: 'vscode-icons:file-type-zip', rar: 'vscode-icons:file-type-zip',
   '7z': 'vscode-icons:file-type-zip', tar: 'vscode-icons:file-type-zip',
   gz: 'vscode-icons:file-type-zip',
-  // Media
   mp3: 'vscode-icons:file-type-audio', wav: 'vscode-icons:file-type-audio',
   ogg: 'vscode-icons:file-type-audio', flac: 'vscode-icons:file-type-audio',
   mp4: 'vscode-icons:file-type-video', avi: 'vscode-icons:file-type-video',
   mov: 'vscode-icons:file-type-video', mkv: 'vscode-icons:file-type-video',
   webm: 'vscode-icons:file-type-video',
-  // Binary
   exe: 'vscode-icons:file-type-executable', dll: 'vscode-icons:file-type-dll',
   msi: 'vscode-icons:file-type-installer', wasm: 'vscode-icons:file-type-wasm',
-  // Generic
   log: 'vscode-icons:file-type-log', txt: 'vscode-icons:file-type-text',
   csv: 'vscode-icons:file-type-csv', tsv: 'vscode-icons:file-type-csv',
   lock: 'vscode-icons:file-type-lock', map: 'vscode-icons:file-type-map',
-  // Git
   gitignore: 'vscode-icons:file-type-git', gitkeep: 'vscode-icons:file-type-git',
-  // Code quality
   eslintrc: 'vscode-icons:file-type-eslint', prettierrc: 'vscode-icons:file-type-prettier',
   editorconfig: 'vscode-icons:file-type-editorconfig',
-  // C/C++
   c: 'vscode-icons:file-type-c', h: 'vscode-icons:file-type-header',
   cpp: 'vscode-icons:file-type-cpp', hpp: 'vscode-icons:file-type-header',
   cs: 'vscode-icons:file-type-csharp', fs: 'vscode-icons:file-type-fsharp',
@@ -88,7 +76,7 @@ function getFileIconName(name: string): string {
   return extIconMap[ext] || 'vscode-icons:default-file'
 }
 
-export function FileTreeNode({ entry, depth, expandedDirs, onToggle, onFileSelect, onCreateFile, onCreateFolder, onRename, onDelete }: FileTreeNodeProps) {
+export function FileTreeNode({ entry, depth, expandedDirs, onToggle, onFileSelect, onCreateFile, onCreateFolder, onRename, onDelete, creating, onCreateSubmit, onCancelCreate }: FileTreeNodeProps) {
   const [children, setChildren] = useState<FileEntry[]>([])
   const [loaded, setLoaded] = useState(false)
   const isExpanded = expandedDirs.has(entry.path)
@@ -155,8 +143,34 @@ export function FileTreeNode({ entry, depth, expandedDirs, onToggle, onFileSelec
               onCreateFolder={onCreateFolder}
               onRename={onRename}
               onDelete={onDelete}
+              creating={creating}
+              onCreateSubmit={onCreateSubmit}
+              onCancelCreate={onCancelCreate}
             />
           ))}
+          {creating?.parentPath === entry.path && (
+            <div className="flex items-center gap-1.5 py-1.5" style={{ paddingLeft: `${(depth + 1) * 18 + 10}px` }}>
+              <Icon
+                icon={creating.type === 'folder' ? 'vscode-icons:default-folder' : 'vscode-icons:default-file'}
+                width={18}
+                height={18}
+              />
+              <input
+                autoFocus
+                type="text"
+                placeholder={creating.type === 'file' ? 'filename.ext' : 'folder-name'}
+                className="flex-1 bg-[#3c3c3c] text-sm text-editor-text px-2 py-1 border border-[#007acc] outline-none rounded"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') onCreateSubmit((e.target as HTMLInputElement).value)
+                  if (e.key === 'Escape') onCancelCreate()
+                }}
+                onBlur={(e) => {
+                  if (e.target.value) onCreateSubmit(e.target.value)
+                  else onCancelCreate()
+                }}
+              />
+            </div>
+          )}
         </div>
       </ContextMenu.Trigger>
       <ContextMenu.Portal>
