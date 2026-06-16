@@ -57,6 +57,7 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  app.setAppUserModelId('com.darstudio.app')
   createWindow()
   registerWindowControls()
   registerFileSystem()

@@ -4,19 +4,26 @@ copyright: Copyright © 2026
 
 win:
   target:
-    - target: nsis
-      arch: [x64]
-    - target: portable
-      arch: [x64]
+    - nsis
+    - portable
   icon: Icon/icon.ico
-  artifactName: DarStudio-Setup-${version}.exe
 
 nsis:
+  artifactName: DarStudio-Setup-${version}
   oneClick: false
+  perMachine: false
   allowToChangeInstallationDirectory: true
+  runAfterFinish: true
   createDesktopShortcut: true
   createStartMenuShortcut: true
   shortcutName: Dar Studio
+  installerIcon: Icon/icon.ico
+  uninstallerIcon: Icon/icon.ico
+  installerHeader: resources/installer-header.bmp
+  installerSidebar: resources/installer-sidebar.bmp
+
+portable:
+  artifactName: DarStudio-Portable-${version}
 
 directories:
   output: dist-electron
