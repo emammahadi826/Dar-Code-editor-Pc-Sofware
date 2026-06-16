@@ -69,11 +69,32 @@ export function MenuBar() {
         },
         {
           label: 'Open File...', shortcut: 'Ctrl+O',
-          action: () => window.electron?.openFile(),
+          action: async () => {
+            if (!window.electron) return
+            const files = await window.electron.openFile()
+            for (const filePath of files) {
+              const content = await window.electron.readFile(filePath)
+              if (content !== null) {
+                const name = filePath.split('\\').pop() || filePath.split('/').pop() || ''
+                useAppStore.getState().openFile(filePath, name, content, '')
+              }
+            }
+          },
         },
         {
           label: 'Open Folder...', shortcut: 'Ctrl+K Ctrl+O',
-          action: () => window.electron?.openFolder(),
+          action: async () => {
+            if (!window.electron) return
+            const paths = await window.electron.openFolder()
+            if (paths.length > 0) {
+              const s = useAppStore.getState()
+              s.setRootPath(paths[0])
+              s.addOutputLog(`[FS] Opened folder: ${paths[0]}`)
+              const entries = await window.electron.readDir(paths[0])
+              s.setFileTree(entries)
+              await window.electron.setLastPath(paths[0])
+            }
+          },
         },
         { separator: true },
         {

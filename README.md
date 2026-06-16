@@ -1,11 +1,11 @@
 <!-- markdownlint-disable MD033 -->
 <div align="center">
-  <img src="Icon/Main%20icon.png" width="120" height="120" alt="Dar Studio Logo">
-  <h1 align="center" style="font-size: 2.5em; margin: 10px 0; color: #ffffff;">Dar Studio</h1>
-  <p align="center" style="font-size: 1em; color: #666; margin: 0;">
-    <em>Developed by Mahadi</em>
-  </p>
-  <p align="center" style="font-size: 1.1em; color: #888; margin: 5px 0 0 0;">
+  <h1 style="font-size: 2.5em; margin: 0; color: #ffffff;">
+    Dar Studio &mdash; <span style="font-size: 0.55em; color: #888;"><em>Developed by Mahadi</em></span>
+  </h1>
+  <br>
+  <img src="Icon/Main%20icon.png" width="200" height="200" alt="Dar Studio Logo">
+  <p align="center" style="font-size: 1.1em; color: #888; margin: 10px 0 0 0;">
     A modern, feature-rich code editor built with Electron, React, and Monaco Editor
   </p>
   <br>
@@ -223,6 +223,57 @@ npm run dev    # Start with Vite hot-reload + Electron
 npm run build      # Build to out/ (3 outputs)
 npm run package    # Build + package with electron-builder (NSIS installer + portable)
 ```
+
+<br>
+
+## Problem Fixes
+
+A chronological list of bugs and issues resolved during development.
+
+### Layout & Rendering
+| Fix | Description |
+|-----|-------------|
+| **Panel API mismatch (App.tsx)** | Fixed `react-resizable-panels` v4 breaking changes — `direction` → `orientation`, `ref` → `panelRef`, `onCollapse`/`onExpand` → `onResize`, `ImperativePanelHandle` → `PanelImperativeHandle`, `collapsedSize={5}` → `collapsedSize={0}` |
+| **Editor 0px height (MainArea.tsx)** | Changed `flex-1` → `h-full` because Panel inner div is `display: block`, so `flex-1` didn't fill the parent |
+| **ActivityBar restructure** | Moved outside horizontal `Group` to avoid non-Panel child warnings |
+
+### File System
+| Fix | Description |
+|-----|-------------|
+| **Nested file/folder creation** | Creation input now renders inline inside the selected directory via `creating` prop instead of root level only |
+| **Children not refreshing after nested create** | Added `refreshKey` prop propagation to `FileTreeNode` — triggers `loadChildren()` re-run when `refreshKey` changes |
+| **File selection highlight** | Added `selectedPath` state in `FileTree`, visual highlight via `bg-active` class |
+| **Create in selected folder** | Header `+` buttons create inside the currently selected directory, fallback to `rootPath` |
+
+### Search
+| Fix | Description |
+|-----|-------------|
+| **Search feature added** | Case-sensitive toggle (`Aa`), result count, clear button, auto-focus input, global shortcut `Ctrl+Shift+F` |
+| **Debounced real-time search** | 300ms debounce via `useEffect` + `searchKeyRef` pattern to cancel stale responses |
+| **Directory skip patterns** | Added `SKIP_DIRS` set — skips `.git`, `node_modules`, `dist`, `out`, `build`, `__pycache__`, `.venv`, `.vite`, `.cache`, `.next`, `.nuxt`, `coverage`, `.turbo`, `.parcel-cache` plus all dotfiles |
+| **Search result click opens file** | Clicking a search result now reads and opens the file in the editor |
+
+### Menu Bar
+| Fix | Description |
+|-----|-------------|
+| **Full menu bar implementation** | Added VS Code-style menu bar: File, Edit, Selection, View, Go, Run, Terminal, Help — click-to-open dropdown with hover-to-navigate |
+| **MenuBar Open File not working** | `openFile()` dialog result now handled — reads and opens selected files in editor |
+| **MenuBar Open Folder not working** | `openFolder()` dialog result now handled — sets `rootPath`, refreshes file tree, persists last path |
+
+### Persistence
+| Fix | Description |
+|-----|-------------|
+| **Last opened folder not remembered** | Added `app:getLastPath`/`app:setLastPath` IPC handlers using Electron `userData` directory. Auto-restores last folder on startup |
+| **SidePanel error handling** | Added `.catch()` to `getLastPath()` promise to prevent unhandled rejection crashes |
+
+### UI Polish
+| Fix | Description |
+|-----|-------------|
+| **TitleBar icon size** | Adjusted from `w-10 h-10` → `w-6 h-6` for better visual balance |
+| **README hero icon size** | Increased from 120px → 200px |
+| **README screenshot paths** | Fixed references to non-existent `1.png–5.png` → actual screenshot filenames |
+| **"Developed by Mahadi"** | Added to README hero title |
+| **Fixed footer credit** | "Made with ❤️ by Mahadi" at bottom of README |
 
 <br>
 

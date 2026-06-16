@@ -19,6 +19,7 @@ interface FileTreeNodeProps {
   onCancelCreate: () => void
   selectedPath: string | null
   onSelect: (path: string) => void
+  refreshKey: number
 }
 
 const extIconMap: Record<string, string> = {
@@ -78,7 +79,7 @@ function getFileIconName(name: string): string {
   return extIconMap[ext] || 'vscode-icons:default-file'
 }
 
-export function FileTreeNode({ entry, depth, expandedDirs, onToggle, onFileSelect, onCreateFile, onCreateFolder, onRename, onDelete, creating, onCreateSubmit, onCancelCreate, selectedPath, onSelect }: FileTreeNodeProps) {
+export function FileTreeNode({ entry, depth, expandedDirs, onToggle, onFileSelect, onCreateFile, onCreateFolder, onRename, onDelete, creating, onCreateSubmit, onCancelCreate, selectedPath, onSelect, refreshKey }: FileTreeNodeProps) {
   const [children, setChildren] = useState<FileEntry[]>([])
   const [loaded, setLoaded] = useState(false)
   const isExpanded = expandedDirs.has(entry.path)
@@ -95,6 +96,12 @@ export function FileTreeNode({ entry, depth, expandedDirs, onToggle, onFileSelec
       loadChildren()
     }
   }, [isExpanded, loaded, loadChildren])
+
+  useEffect(() => {
+    if (isExpanded && loaded) {
+      setLoaded(false)
+    }
+  }, [refreshKey])
 
   const handleClick = () => {
     if (entry.isDirectory) {
@@ -212,6 +219,7 @@ export function FileTreeNode({ entry, depth, expandedDirs, onToggle, onFileSelec
               onCancelCreate={onCancelCreate}
               selectedPath={selectedPath}
               onSelect={onSelect}
+              refreshKey={refreshKey}
             />
           ))}
         </div>

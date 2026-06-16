@@ -13,8 +13,8 @@ export function TitleBar() {
       className="h-10 flex items-center justify-between bg-titlebar-bg select-none shrink-0"
       style={{ WebkitAppRegion: 'drag' } as any}
     >
-      <div className="flex items-center gap-3 px-3 shrink-0">
-        <img src={appIcon} alt="Dar Studio" className="w-8 h-8" />
+      <div className="flex items-center gap-2 px-3 shrink-0">
+        <img src={appIcon} alt="Dar Studio" className="w-6 h-6" />
         <span className="text-titlebar-text text-sm font-semibold">Dar Studio</span>
       </div>
       <div className="flex-1 h-full flex items-center justify-center">

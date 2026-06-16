@@ -28,8 +28,10 @@ export function SidePanel() {
       if (stillExists) {
         setRootPath(lastPath)
       }
+    }).catch(() => {
+      addOutputLog('[App] Could not restore last folder')
     })
-  }, [setRootPath])
+  }, [setRootPath, addOutputLog])
 
   const handleFileSelect = async (filePath: string, fileName: string) => {
     const content = await readFile(filePath)

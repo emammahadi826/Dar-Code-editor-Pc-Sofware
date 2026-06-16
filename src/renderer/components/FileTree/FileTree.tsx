@@ -196,6 +196,7 @@ export function FileTree({ rootPath, onFileSelect }: FileTreeProps) {
           onCancelCreate={() => setCreating(null)}
           selectedPath={selectedPath}
           onSelect={handleSelect}
+          refreshKey={refreshKey}
         />
       ))}
 
