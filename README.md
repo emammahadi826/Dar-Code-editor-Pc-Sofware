@@ -1,5 +1,9 @@
 # Dar Studio
 
+<p align="center">
+  <img src="Icon/Main%20icon.png" alt="Dar Studio" width="400"/>
+</p>
+
 Dar Studio — A modern, lightweight code editor for Windows built with Electron, React, and Monaco Editor (same engine as VS Code).
 
 ## Screenshots
