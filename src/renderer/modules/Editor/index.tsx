@@ -81,7 +81,6 @@ export function EditorModule() {
         height="100%"
         defaultLanguage={activeFile.language}
         language={activeFile.language}
-        defaultValue={activeFile.content}
         value={activeFile.content}
         theme="vs-dark"
         onChange={handleChange}

@@ -17,13 +17,15 @@ function PlaceholderView({ icon: Icon, title, description }: { icon: any; title:
 }
 
 export function SidePanel() {
-  const { rootPath, openFile, activeModule } = useAppStore()
+  const { rootPath, openFile, activeModule, addOutputLog } = useAppStore()
   const { openFolder, readFile } = useFileSystem()
 
   const handleFileSelect = async (filePath: string, fileName: string) => {
     const content = await readFile(filePath)
     if (content !== null) {
       openFile(filePath, fileName, content, '')
+    } else {
+      addOutputLog(`[FS] Failed to read file: ${fileName}`)
     }
   }
 
