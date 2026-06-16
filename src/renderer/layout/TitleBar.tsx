@@ -14,7 +14,7 @@ export function TitleBar() {
       style={{ WebkitAppRegion: 'drag' } as any}
     >
       <div className="flex items-center gap-3 px-3 shrink-0">
-        <img src={appIcon} alt="Dar Studio" className="w-6 h-6" />
+        <img src={appIcon} alt="Dar Studio" className="w-8 h-8" />
         <span className="text-titlebar-text text-sm font-semibold">Dar Studio</span>
       </div>
       <div className="flex-1 h-full flex items-center justify-center">

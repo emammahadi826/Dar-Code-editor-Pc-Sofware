@@ -2,12 +2,15 @@
 <div align="center">
   <img src="Icon/Main%20icon.png" width="120" height="120" alt="Dar Studio Logo">
   <h1 align="center" style="font-size: 2.5em; margin: 10px 0; color: #ffffff;">Dar Studio</h1>
-  <p align="center" style="font-size: 1.1em; color: #888; margin: 0;">
+  <p align="center" style="font-size: 1em; color: #666; margin: 0;">
+    <em>Developed by Mahadi</em>
+  </p>
+  <p align="center" style="font-size: 1.1em; color: #888; margin: 5px 0 0 0;">
     A modern, feature-rich code editor built with Electron, React, and Monaco Editor
   </p>
   <br>
   <p align="center">
-    <img src="Screen%20Shorts/1.png" width="800" alt="Dar Studio Screenshot" style="border-radius: 8px; border: 1px solid #333;">
+    <img src="Screen%20Shorts/Screenshot%202026-06-16%20073110.png" width="800" alt="Dar Studio Screenshot" style="border-radius: 8px; border: 1px solid #333;">
   </p>
 </div>
 
@@ -83,15 +86,9 @@ Dar Studio is a full-featured code editor for Windows, built from the ground up 
 ## Screenshots
 
 <div align="center">
-  <img src="Screen%20Shorts/1.png" width="800" alt="Dar Studio Screenshot 1" style="border-radius: 8px; border: 1px solid #333; margin: 10px;">
+  <img src="Screen%20Shorts/Screenshot%202026-06-16%20073110.png" width="800" alt="Dar Studio Screenshot 1" style="border-radius: 8px; border: 1px solid #333; margin: 10px;">
   <br>
-  <img src="Screen%20Shorts/2.png" width="800" alt="Dar Studio Screenshot 1" style="border-radius: 8px; border: 1px solid #333; margin: 10px;">
-  <br>
-  <img src="Screen%20Shorts/3.png" width="800" alt="Dar Studio Screenshot 1" style="border-radius: 8px; border: 1px solid #333; margin: 10px;">
-  <br>
-  <img src="Screen%20Shorts/4.png" width="800" alt="Dar Studio Screenshot 1" style="border-radius: 8px; border: 1px solid #333; margin: 10px;">
-  <br>
-  <img src="Screen%20Shorts/5.png" width="800" alt="Dar Studio Screenshot 1" style="border-radius: 8px; border: 1px solid #333; margin: 10px;">
+  <img src="Screen%20Shorts/Screenshot%202026-06-16%20073253.png" width="800" alt="Dar Studio Screenshot 2" style="border-radius: 8px; border: 1px solid #333; margin: 10px;">
 </div>
 
 <br>
@@ -238,5 +235,5 @@ This project is licensed under the MIT License — see the [LICENSE](LICENSE) fi
 ---
 
 <div align="center">
-  <p>Made with ❤️ by <strong>Mahadi</strong></p>
+  <p style="font-size: 1.1em;">Made with ❤️ by <strong>Mahadi</strong></p>
 </div>
