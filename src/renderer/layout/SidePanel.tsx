@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { useAppStore } from '../store/appStore'
 import { FileTree } from '../components/FileTree/FileTree'
 import { SearchInFiles } from '../modules/SearchInFiles'
@@ -17,8 +17,19 @@ function PlaceholderView({ icon: Icon, title, description }: { icon: any; title:
 }
 
 export function SidePanel() {
-  const { rootPath, openFile, activeModule, addOutputLog } = useAppStore()
+  const { rootPath, openFile, activeModule, addOutputLog, setRootPath } = useAppStore()
   const { openFolder, readFile } = useFileSystem()
+
+  useEffect(() => {
+    if (!window.electron) return
+    window.electron.getLastPath().then(async (lastPath) => {
+      if (!lastPath) return
+      const stillExists = await window.electron.exists(lastPath)
+      if (stillExists) {
+        setRootPath(lastPath)
+      }
+    })
+  }, [setRootPath])
 
   const handleFileSelect = async (filePath: string, fileName: string) => {
     const content = await readFile(filePath)

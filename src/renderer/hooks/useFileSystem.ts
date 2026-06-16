@@ -12,6 +12,7 @@ export function useFileSystem() {
     if (paths.length > 0) {
       setRootPath(paths[0])
       await refreshTree(paths[0])
+      await window.electron.setLastPath(paths[0])
       addOutputLog(`[FS] Opened folder: ${paths[0]}`)
     }
   }, [setRootPath, addOutputLog])

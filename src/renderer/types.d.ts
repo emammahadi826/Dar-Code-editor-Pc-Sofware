@@ -45,6 +45,9 @@ export interface ElectronAPI {
   openFolder: () => Promise<string[]>
   saveFile: (defaultPath?: string) => Promise<string | null>
 
+  getLastPath: () => Promise<string | null>
+  setLastPath: (dirPath: string) => Promise<void>
+
   searchInFiles: (p: { rootPath: string; query: string; caseSensitive?: boolean; maxResults?: number }) => Promise<SearchResult[]>
 
   terminal: TerminalAPI

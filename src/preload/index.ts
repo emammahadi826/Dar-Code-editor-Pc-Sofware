@@ -21,6 +21,10 @@ contextBridge.exposeInMainWorld('electron', {
   openFolder: () => ipcRenderer.invoke('dialog:openFolder'),
   saveFile: (defaultPath?: string) => ipcRenderer.invoke('dialog:saveFile', defaultPath),
 
+  // Persist
+  getLastPath: () => ipcRenderer.invoke('app:getLastPath'),
+  setLastPath: (dirPath: string) => ipcRenderer.invoke('app:setLastPath', dirPath),
+
   // Search
   searchInFiles: (p: { rootPath: string; query: string; caseSensitive?: boolean; maxResults?: number }) =>
     ipcRenderer.invoke('search:inFiles', p),

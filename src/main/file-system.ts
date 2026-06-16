@@ -1,4 +1,4 @@
-import { ipcMain, dialog } from 'electron'
+import { ipcMain, dialog, app } from 'electron'
 import fs from 'fs'
 import path from 'path'
 
@@ -95,5 +95,22 @@ export function registerFileSystem() {
       filters: [{ name: 'All Files', extensions: ['*'] }],
     })
     return result.filePath
+  })
+
+  ipcMain.handle('app:getLastPath', async () => {
+    try {
+      const p = path.join(app.getPath('userData'), 'last-path.json')
+      if (fs.existsSync(p)) return JSON.parse(fs.readFileSync(p, 'utf-8'))
+      return null
+    } catch {
+      return null
+    }
+  })
+
+  ipcMain.handle('app:setLastPath', async (_, dirPath: string) => {
+    try {
+      const p = path.join(app.getPath('userData'), 'last-path.json')
+      fs.writeFileSync(p, JSON.stringify(dirPath), 'utf-8')
+    } catch {}
   })
 }
