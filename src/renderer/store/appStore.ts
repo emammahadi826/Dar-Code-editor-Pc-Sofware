@@ -19,6 +19,9 @@ interface AppState {
   bottomPanelTab: 'OUTPUT' | 'TERMINAL' | 'PROBLEMS'
   setBottomPanelTab: (t: 'OUTPUT' | 'TERMINAL' | 'PROBLEMS') => void
 
+  activeModule: 'Files' | 'Search' | 'Git' | 'Extensions' | 'Settings'
+  setActiveModule: (m: 'Files' | 'Search' | 'Git' | 'Extensions' | 'Settings') => void
+
   openTabs: OpenTab[]
   activeTab: string | null
   openFile: (path: string, name: string, content: string, language: string) => void
@@ -61,8 +64,11 @@ export const useAppStore = create<AppState>((set) => ({
   toggleBottomPanel: () => set((s) => ({ bottomPanelOpen: !s.bottomPanelOpen })),
   rightPanelOpen: true,
   toggleRightPanel: () => set((s) => ({ rightPanelOpen: !s.rightPanelOpen })),
-  bottomPanelTab: 'OUTPUT',
+  bottomPanelTab: 'TERMINAL',
   setBottomPanelTab: (t) => set({ bottomPanelTab: t }),
+
+  activeModule: 'Files',
+  setActiveModule: (m) => set({ activeModule: m }),
 
   openTabs: [],
   activeTab: null,

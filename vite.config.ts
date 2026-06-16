@@ -3,12 +3,18 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin()]
+    plugins: [externalizeDepsPlugin()],
+    build: {
+      rollupOptions: {
+        output: { format: 'cjs' },
+      },
+    },
   },
   preload: {
     plugins: [externalizeDepsPlugin()]
   },
   renderer: {
-    plugins: [react()]
+    root: 'src/renderer',
+    plugins: [react()],
   }
 })

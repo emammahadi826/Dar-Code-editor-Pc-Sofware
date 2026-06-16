@@ -5,17 +5,17 @@ import { TerminalPanel } from '../components/Terminal/TerminalPanel'
 const tabs = ['OUTPUT', 'TERMINAL', 'PROBLEMS'] as const
 
 export function BottomPanel() {
-  const { bottomPanelOpen, toggleBottomPanel, bottomPanelTab, setBottomPanelTab, outputLogs } = useAppStore()
+  const { toggleBottomPanel, bottomPanelTab, setBottomPanelTab, outputLogs } = useAppStore()
 
   return (
-    <div className="bg-panel border-t border-panel-border flex flex-col">
-      <div className="flex items-center justify-between px-2">
+    <div className="h-full bg-panel border-t border-panel-border flex flex-col overflow-hidden">
+      <div className="flex items-center justify-between px-3 shrink-0">
         <div className="flex">
           {tabs.map((tab) => (
             <button
               key={tab}
               onClick={() => setBottomPanelTab(tab)}
-              className={`px-3 py-1.5 text-xs border-t-2 transition-colors ${
+              className={`px-4 py-2 text-sm border-t-2 transition-colors ${
                 bottomPanelTab === tab
                   ? 'text-panel-tab-active border-accent-blue bg-editor-bg'
                   : 'text-panel-tab-text border-transparent hover:text-white'
@@ -27,28 +27,26 @@ export function BottomPanel() {
         </div>
         <button
           onClick={toggleBottomPanel}
-          className="text-panel-tab-text text-xs px-2 hover:text-white"
+          className="text-panel-tab-text text-sm px-2 hover:text-white"
         >
-          {bottomPanelOpen ? '─' : '+'}
+          ─
         </button>
       </div>
-      {bottomPanelOpen && (
-        <div className="h-[200px] overflow-y-auto">
-          {bottomPanelTab === 'TERMINAL' ? (
-            <TerminalPanel />
-          ) : bottomPanelTab === 'OUTPUT' ? (
-            <div className="p-3 font-mono text-xs bg-editor-bg h-full">
-              {outputLogs.map((log, i) => (
-                <div key={i} className="text-editor-text opacity-80">{log}</div>
-              ))}
-            </div>
-          ) : (
-            <div className="p-3 font-mono text-xs bg-editor-bg h-full text-editor-text opacity-40">
-              No problems detected
-            </div>
-          )}
-        </div>
-      )}
+      <div className="flex-1 overflow-hidden">
+        {bottomPanelTab === 'TERMINAL' ? (
+          <TerminalPanel />
+        ) : bottomPanelTab === 'OUTPUT' ? (
+          <div className="p-4 font-mono text-sm bg-editor-bg h-full overflow-y-auto">
+            {outputLogs.map((log, i) => (
+              <div key={i} className="text-editor-text opacity-80">{log}</div>
+            ))}
+          </div>
+        ) : (
+          <div className="p-4 font-mono text-sm bg-editor-bg h-full text-editor-text opacity-40 overflow-y-auto">
+            No problems detected
+          </div>
+        )}
+      </div>
     </div>
   )
 }

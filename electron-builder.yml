@@ -8,7 +8,7 @@ win:
       arch: [x64]
     - target: portable
       arch: [x64]
-  icon: Icon/icon-256.ico
+  icon: Icon/icon.ico
   artifactName: DarStudio-Setup-${version}.exe
 
 nsis:

@@ -24,4 +24,18 @@ contextBridge.exposeInMainWorld('electron', {
   // Search
   searchInFiles: (p: { rootPath: string; query: string; caseSensitive?: boolean; maxResults?: number }) =>
     ipcRenderer.invoke('search:inFiles', p),
+
+  // Terminal
+  terminal: {
+    create: (shell: string) => ipcRenderer.invoke('terminal:create', shell),
+    write: (id: number, data: string) => ipcRenderer.send('terminal:write', id, data),
+    resize: (id: number, cols: number, rows: number) => ipcRenderer.send('terminal:resize', id, cols, rows),
+    kill: (id: number) => ipcRenderer.send('terminal:kill', id),
+    onData: (callback: (id: number, data: string) => void) => {
+      const handler = (_: any, id: number, data: string) => callback(id, data)
+      ipcRenderer.on('terminal:data', handler)
+      return () => ipcRenderer.removeListener('terminal:data', handler)
+    },
+    getShells: () => ipcRenderer.invoke('terminal:getShells'),
+  },
 })

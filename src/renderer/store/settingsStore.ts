@@ -1,16 +1,19 @@
 import { create } from 'zustand'
 
+export type WordWrap = 'off' | 'on' | 'wordWrapColumn' | 'bounded'
+export type LineNumbers = 'on' | 'off' | 'relative'
+
 interface SettingsState {
   fontSize: number
   setFontSize: (s: number) => void
   tabSize: number
   setTabSize: (s: number) => void
-  wordWrap: 'on' | 'off'
-  setWordWrap: (w: 'on' | 'off') => void
+  wordWrap: WordWrap
+  setWordWrap: (w: WordWrap) => void
   minimap: boolean
   setMinimap: (m: boolean) => void
-  lineNumbers: 'on' | 'off' | 'relative'
-  setLineNumbers: (l: 'on' | 'off' | 'relative') => void
+  lineNumbers: LineNumbers
+  setLineNumbers: (l: LineNumbers) => void
 }
 
 export const useSettingsStore = create<SettingsState>((set) => ({
