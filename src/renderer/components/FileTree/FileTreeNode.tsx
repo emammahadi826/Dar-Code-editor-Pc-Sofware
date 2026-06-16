@@ -17,6 +17,8 @@ interface FileTreeNodeProps {
   creating: { parentPath: string; type: 'file' | 'folder' } | null
   onCreateSubmit: (name: string) => void
   onCancelCreate: () => void
+  selectedPath: string | null
+  onSelect: (path: string) => void
 }
 
 const extIconMap: Record<string, string> = {
@@ -76,7 +78,7 @@ function getFileIconName(name: string): string {
   return extIconMap[ext] || 'vscode-icons:default-file'
 }
 
-export function FileTreeNode({ entry, depth, expandedDirs, onToggle, onFileSelect, onCreateFile, onCreateFolder, onRename, onDelete, creating, onCreateSubmit, onCancelCreate }: FileTreeNodeProps) {
+export function FileTreeNode({ entry, depth, expandedDirs, onToggle, onFileSelect, onCreateFile, onCreateFolder, onRename, onDelete, creating, onCreateSubmit, onCancelCreate, selectedPath, onSelect }: FileTreeNodeProps) {
   const [children, setChildren] = useState<FileEntry[]>([])
   const [loaded, setLoaded] = useState(false)
   const isExpanded = expandedDirs.has(entry.path)
@@ -100,56 +102,77 @@ export function FileTreeNode({ entry, depth, expandedDirs, onToggle, onFileSelec
     } else {
       onFileSelect(entry.path, entry.name)
     }
+    onSelect(entry.path)
   }
 
-  const iconName = entry.isDirectory
-    ? (isExpanded ? 'vscode-icons:default-folder-opened' : 'vscode-icons:default-folder')
-    : getFileIconName(entry.name)
+  const handleCreateClick = useCallback((type: 'file' | 'folder') => {
+    return (e: React.MouseEvent) => {
+      e.stopPropagation()
+      if (type === 'file') onCreateFile(entry.path)
+      else onCreateFolder(entry.path)
+      onSelect(entry.path)
+    }
+  }, [entry.path, onCreateFile, onCreateFolder, onSelect])
+
+  const isSelected = entry.path === selectedPath
+  const isCreatingHere = creating?.parentPath === entry.path
 
   return (
     <ContextMenu.Root>
       <ContextMenu.Trigger>
         <div>
           <div
+            className={`flex items-center gap-1.5 py-1 cursor-pointer group select-none rounded-sm ${
+              isSelected ? 'bg-active text-white' : 'hover:bg-hover text-sidepanel-text'
+            }`}
+            style={{ paddingLeft: `${8 + depth * 14}px` }}
             onClick={handleClick}
-            className="flex items-center gap-1.5 px-3 py-1.5 cursor-pointer text-sidepanel-text hover:bg-sidepanel-hover rounded-sm"
-            style={{ paddingLeft: `${depth * 18 + 10}px` }}
+            onContextMenu={(e) => {
+              e.preventDefault()
+              onSelect(entry.path)
+            }}
           >
-            {entry.isDirectory ? (
-              <>
-                <span className="w-4 h-4 flex items-center justify-center shrink-0">
-                  {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                </span>
-                <Icon icon={iconName} width={18} height={18} className="shrink-0" />
-                <span className="ml-1.5 text-sm truncate">{entry.name}</span>
-              </>
-            ) : (
-              <>
-                <span className="w-4 shrink-0" />
-                <Icon icon={iconName} width={18} height={18} className="shrink-0" />
-                <span className="ml-1.5 text-sm truncate">{entry.name}</span>
-              </>
+            {entry.isDirectory && (
+              <span className="w-4 h-4 flex items-center justify-center shrink-0">
+                {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+              </span>
+            )}
+            {!entry.isDirectory && <span className="w-4" />}
+            <Icon
+              icon={entry.isDirectory
+                ? (isExpanded ? 'vscode-icons:default-folder-opened' : 'vscode-icons:default-folder')
+                : getFileIconName(entry.name)
+              }
+              width={18}
+              height={18}
+              className="shrink-0"
+            />
+            <span className="truncate text-sm">{entry.name}</span>
+            {entry.isDirectory && (
+              <div className="ml-auto hidden group-hover:flex items-center gap-0.5 pr-1">
+                <button
+                  onClick={handleCreateClick('file')}
+                  className="p-0.5 text-sidepanel-text hover:text-white rounded hover:bg-[#3c3c3c] transition-colors"
+                  title="New File"
+                >
+                  <Icon icon="vscode-icons:default-file" width={14} height={14} />
+                </button>
+                <button
+                  onClick={handleCreateClick('folder')}
+                  className="p-0.5 text-sidepanel-text hover:text-white rounded hover:bg-[#3c3c3c] transition-colors"
+                  title="New Folder"
+                >
+                  <Icon icon="vscode-icons:default-folder" width={14} height={14} />
+                </button>
+              </div>
             )}
           </div>
-          {isExpanded && children.map((child) => (
-            <FileTreeNode
-              key={child.path}
-              entry={child}
-              depth={depth + 1}
-              expandedDirs={expandedDirs}
-              onToggle={onToggle}
-              onFileSelect={onFileSelect}
-              onCreateFile={onCreateFile}
-              onCreateFolder={onCreateFolder}
-              onRename={onRename}
-              onDelete={onDelete}
-              creating={creating}
-              onCreateSubmit={onCreateSubmit}
-              onCancelCreate={onCancelCreate}
-            />
-          ))}
-          {creating?.parentPath === entry.path && (
-            <div className="flex items-center gap-1.5 py-1.5" style={{ paddingLeft: `${(depth + 1) * 18 + 10}px` }}>
+
+          {isCreatingHere && (
+            <div
+              className="flex items-center gap-1.5 py-1"
+              style={{ paddingLeft: `${8 + (depth + 1) * 14}px` }}
+            >
               <Icon
                 icon={creating.type === 'folder' ? 'vscode-icons:default-folder' : 'vscode-icons:default-file'}
                 width={18}
@@ -171,56 +194,68 @@ export function FileTreeNode({ entry, depth, expandedDirs, onToggle, onFileSelec
               />
             </div>
           )}
+
+          {entry.isDirectory && isExpanded && loaded && children.map((child) => (
+            <FileTreeNode
+              key={child.path}
+              entry={child}
+              depth={depth + 1}
+              expandedDirs={expandedDirs}
+              onToggle={onToggle}
+              onFileSelect={onFileSelect}
+              onCreateFile={onCreateFile}
+              onCreateFolder={onCreateFolder}
+              onRename={onRename}
+              onDelete={onDelete}
+              creating={creating}
+              onCreateSubmit={onCreateSubmit}
+              onCancelCreate={onCancelCreate}
+              selectedPath={selectedPath}
+              onSelect={onSelect}
+            />
+          ))}
         </div>
       </ContextMenu.Trigger>
-      <ContextMenu.Portal>
-        <ContextMenu.Content
-          className="min-w-[200px] bg-[#252526] border border-[#454545] rounded py-1.5 shadow-xl z-50"
-          alignOffset={-4}
+
+      <ContextMenu.Content className="bg-[#252526] border border-[#3c3c3c] rounded shadow-xl py-1 min-w-[180px]">
+        <ContextMenu.Item
+          className="text-sm text-sidepanel-text px-3 py-1.5 cursor-pointer hover:bg-[#094771] hover:text-white outline-none flex items-center gap-2"
+          onClick={() => onSelect(entry.path)}
         >
-          {entry.isDirectory && (
-            <>
-              <ContextMenu.Item
-                onSelect={() => onCreateFile(entry.path)}
-                className="flex items-center gap-3 px-4 py-2 text-sm text-[#cccccc] cursor-pointer hover:bg-[#094771] outline-none"
-              >
-                <Icon icon="vscode-icons:file-type-text" width={16} height={16} />
-                New File
-              </ContextMenu.Item>
-              <ContextMenu.Item
-                onSelect={() => onCreateFolder(entry.path)}
-                className="flex items-center gap-3 px-4 py-2 text-sm text-[#cccccc] cursor-pointer hover:bg-[#094771] outline-none"
-              >
-                <Icon icon="vscode-icons:default-folder" width={16} height={16} />
-                New Folder
-              </ContextMenu.Item>
-              <ContextMenu.Separator className="h-px bg-[#3c3c3c] mx-3 my-1" />
-            </>
-          )}
-          <ContextMenu.Item
-            onSelect={() => onRename(entry.path, entry.name)}
-            className="flex items-center gap-3 px-4 py-2 text-sm text-[#cccccc] cursor-pointer hover:bg-[#094771] outline-none"
-          >
-            <Icon icon="vscode-icons:default-file" width={16} height={16} />
-            Rename
-          </ContextMenu.Item>
-          <ContextMenu.Item
-            onSelect={() => onDelete(entry.path)}
-            className="flex items-center gap-3 px-4 py-2 text-sm text-[#cccccc] cursor-pointer hover:bg-[#094771] outline-none"
-          >
-            <Icon icon="vscode-icons:file-type-binary" width={16} height={16} />
-            Delete
-          </ContextMenu.Item>
-          <ContextMenu.Separator className="h-px bg-[#3c3c3c] mx-3 my-1" />
-          <ContextMenu.Item
-            onSelect={() => navigator.clipboard.writeText(entry.path)}
-            className="flex items-center gap-3 px-4 py-2 text-sm text-[#cccccc] cursor-pointer hover:bg-[#094771] outline-none"
-          >
-            <Icon icon="vscode-icons:file-type-text" width={16} height={16} />
-            Copy Path
-          </ContextMenu.Item>
-        </ContextMenu.Content>
-      </ContextMenu.Portal>
+          <Icon icon={entry.isDirectory ? 'vscode-icons:default-folder-opened' : getFileIconName(entry.name)} width={16} height={16} />
+          {entry.name}
+        </ContextMenu.Item>
+        <ContextMenu.Separator className="h-px bg-[#3c3c3c] mx-2 my-1" />
+        <ContextMenu.Item
+          className="text-sm text-sidepanel-text px-3 py-1.5 cursor-pointer hover:bg-[#094771] hover:text-white outline-none"
+          onClick={() => onRename(entry.path, entry.name)}
+        >
+          Rename
+        </ContextMenu.Item>
+        <ContextMenu.Item
+          className="text-sm text-red-400 px-3 py-1.5 cursor-pointer hover:bg-[#094771] hover:text-white outline-none"
+          onClick={() => onDelete(entry.path)}
+        >
+          Delete
+        </ContextMenu.Item>
+        {entry.isDirectory && (
+          <>
+            <ContextMenu.Separator className="h-px bg-[#3c3c3c] mx-2 my-1" />
+            <ContextMenu.Item
+              className="text-sm text-sidepanel-text px-3 py-1.5 cursor-pointer hover:bg-[#094771] hover:text-white outline-none"
+              onClick={() => onCreateFile(entry.path)}
+            >
+              New File
+            </ContextMenu.Item>
+            <ContextMenu.Item
+              className="text-sm text-sidepanel-text px-3 py-1.5 cursor-pointer hover:bg-[#094771] hover:text-white outline-none"
+              onClick={() => onCreateFolder(entry.path)}
+            >
+              New Folder
+            </ContextMenu.Item>
+          </>
+        )}
+      </ContextMenu.Content>
     </ContextMenu.Root>
   )
 }

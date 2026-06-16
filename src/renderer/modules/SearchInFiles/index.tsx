@@ -14,29 +14,52 @@ export function SearchInFiles() {
   const addOutputLog = useAppStore((s) => s.addOutputLog)
   const openFile = useAppStore((s) => s.openFile)
   const { readFile } = useFileSystem()
+  const searchKeyRef = useRef(0)
 
   useEffect(() => {
     inputRef.current?.focus()
   }, [])
 
-  const handleSearch = useCallback(async () => {
-    if (!query.trim() || !rootPath || !window.electron) return
+  const doSearch = useCallback(async (q: string, sensitive: boolean) => {
+    if (!q.trim() || !rootPath || !window.electron) {
+      setResults([])
+      return
+    }
     setSearching(true)
+    const key = ++searchKeyRef.current
     try {
       const res = await window.electron.searchInFiles({
         rootPath,
-        query: query.trim(),
-        caseSensitive,
+        query: q.trim(),
+        caseSensitive: sensitive,
         maxResults: 500,
       })
-      setResults(res)
-      addOutputLog(`[Search] "${query}" → ${res.length} results`)
+      if (key === searchKeyRef.current) {
+        setResults(res)
+        addOutputLog(`[Search] "${q}" → ${res.length} results`)
+      }
     } catch {
-      addOutputLog(`[Search] Error searching for "${query}"`)
+      if (key === searchKeyRef.current) {
+        addOutputLog(`[Search] Error searching for "${q}"`)
+      }
     } finally {
-      setSearching(false)
+      if (key === searchKeyRef.current) {
+        setSearching(false)
+      }
     }
-  }, [query, rootPath, caseSensitive, addOutputLog])
+  }, [rootPath, addOutputLog])
+
+  useEffect(() => {
+    const trimmed = query.trim()
+    if (!trimmed || !rootPath) {
+      setResults([])
+      return
+    }
+    const timer = setTimeout(() => {
+      doSearch(query, caseSensitive)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [query, rootPath, caseSensitive, doSearch])
 
   const handleResultClick = useCallback(async (result: SearchResult) => {
     const content = await readFile(result.file)
@@ -61,12 +84,17 @@ export function SearchInFiles() {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                searchKeyRef.current++
+                doSearch(query, caseSensitive)
+              }
+            }}
             placeholder="Search in files..."
             className="flex-1 bg-transparent text-editor-text text-xs px-2 py-1.5 outline-none"
           />
           {query && (
-            <button onClick={() => setQuery('')} className="p-1 text-editor-text opacity-50 hover:opacity-100">
+            <button onClick={() => { setQuery(''); setResults([]) }} className="p-1 text-editor-text opacity-50 hover:opacity-100">
               <X size={12} />
             </button>
           )}
@@ -83,7 +111,10 @@ export function SearchInFiles() {
           Aa
         </button>
         <button
-          onClick={handleSearch}
+          onClick={() => {
+            searchKeyRef.current++
+            doSearch(query, caseSensitive)
+          }}
           disabled={searching || !query.trim()}
           className="px-2 py-1.5 bg-accent-blue text-white rounded text-xs hover:bg-accent-blue-h disabled:opacity-50"
         >

@@ -18,6 +18,7 @@ export function FileTree({ rootPath, onFileSelect }: FileTreeProps) {
   const [renaming, setRenaming] = useState<{ path: string; name: string } | null>(null)
   const [creating, setCreating] = useState<{ parentPath: string; type: 'file' | 'folder' } | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
+  const [selectedPath, setSelectedPath] = useState<string | null>(null)
 
   const loadEntries = useCallback(async (dirPath: string) => {
     if (!window.electron) return
@@ -36,6 +37,18 @@ export function FileTree({ rootPath, onFileSelect }: FileTreeProps) {
     else next.add(dirPath)
     setExpandedDirs(next)
   }, [expandedDirs])
+
+  const handleSelect = useCallback((path: string) => {
+    setSelectedPath(path)
+  }, [])
+
+  const getCreateParent = useCallback(() => {
+    if (selectedPath) {
+      const entry = entries.find(e => e.path === selectedPath)
+      if (entry?.isDirectory) return selectedPath
+    }
+    return rootPath
+  }, [selectedPath, entries, rootPath])
 
   const handleCreateFile = useCallback(async (parentPath: string) => {
     setCreating({ parentPath, type: 'file' })
@@ -96,6 +109,11 @@ export function FileTree({ rootPath, onFileSelect }: FileTreeProps) {
     addOutputLog('[FS] Refreshed file tree')
   }, [addOutputLog])
 
+  const createParent = getCreateParent()
+  const createParentName = createParent === rootPath
+    ? (rootPath.split('\\').pop() || rootPath.split('/').pop() || 'root')
+    : (createParent.split('\\').pop() || createParent.split('/').pop() || 'folder')
+
   if (loading) {
     return <div className="text-sidepanel-text text-sm p-3 opacity-60">Loading...</div>
   }
@@ -103,10 +121,10 @@ export function FileTree({ rootPath, onFileSelect }: FileTreeProps) {
   return (
     <div className="text-sm">
       <div className="flex items-center justify-between px-3 py-1.5 mb-1">
-        <span className="text-sidepanel-header text-sm font-semibold uppercase tracking-wider">
+        <span className="text-sidepanel-header text-sm font-semibold uppercase tracking-wider truncate">
           {rootPath.split('\\').pop() || rootPath.split('/').pop()}
         </span>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 shrink-0">
           <button
             onClick={handleRefresh}
             className="p-1 text-sidepanel-text hover:text-white rounded hover:bg-hover transition-colors"
@@ -115,20 +133,26 @@ export function FileTree({ rootPath, onFileSelect }: FileTreeProps) {
             <RotateCw size={14} />
           </button>
           <button
-            onClick={() => handleCreateFile(rootPath)}
+            onClick={() => handleCreateFile(createParent)}
             className="p-1 text-sidepanel-text hover:text-white rounded hover:bg-hover transition-colors"
-            title="New File"
+            title={`New File in ${createParentName}`}
           >
             <Plus size={14} />
           </button>
           <button
-            onClick={() => handleCreateFolder(rootPath)}
+            onClick={() => handleCreateFolder(createParent)}
             className="p-1 text-sidepanel-text hover:text-white rounded hover:bg-hover transition-colors"
-            title="New Folder"
+            title={`New Folder in ${createParentName}`}
           >
             <FolderPlus size={14} />
           </button>
         </div>
+      </div>
+
+      <div className="px-3 pb-1">
+        <span className="text-xs text-sidepanel-text opacity-40">
+          Creating in: {createParentName}
+        </span>
       </div>
 
       {creating && creating.parentPath === rootPath && (
@@ -170,6 +194,8 @@ export function FileTree({ rootPath, onFileSelect }: FileTreeProps) {
           creating={creating}
           onCreateSubmit={handleCreateSubmit}
           onCancelCreate={() => setCreating(null)}
+          selectedPath={selectedPath}
+          onSelect={handleSelect}
         />
       ))}
 

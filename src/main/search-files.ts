@@ -9,6 +9,11 @@ interface SearchResult {
   text: string
 }
 
+const SKIP_DIRS = new Set([
+  '.git', 'dist', 'out', 'build', '.cache', '__pycache__', '.venv', '.vite',
+  'node_modules', '.next', '.nuxt', 'coverage', '.turbo', '.parcel-cache',
+])
+
 function searchInFile(filePath: string, query: string, caseSensitive: boolean): SearchResult[] {
   try {
     const content = fs.readFileSync(filePath, 'utf-8')
@@ -40,8 +45,9 @@ function searchDir(dirPath: string, query: string, caseSensitive: boolean, maxRe
     const entries = fs.readdirSync(dirPath, { withFileTypes: true })
     for (const entry of entries) {
       if (results.length >= maxResults) break
+      if (entry.name.startsWith('.') || SKIP_DIRS.has(entry.name)) continue
       const fullPath = path.join(dirPath, entry.name)
-      if (entry.isDirectory() && !entry.name.startsWith('.') && entry.name !== 'node_modules') {
+      if (entry.isDirectory()) {
         results.push(...searchDir(fullPath, query, caseSensitive, maxResults - results.length))
       } else if (entry.isFile()) {
         results.push(...searchInFile(fullPath, query, caseSensitive))
