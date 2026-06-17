@@ -33,10 +33,23 @@ Dar Studio is a full-featured code editor for Windows, built from the ground up 
 ### File Management
 - **File Explorer** — Tree-based file browser with expand/collapse directories
 - **File operations** — Create, rename, delete files and folders
-- **Context menus** — Right-click on files/folders for quick actions
 - **Selection highlight** — Click to select files/folders with visual highlight
 - **Create in folder** — Header + buttons create inside the currently selected folder
+- **Tree connecting lines** — Indent guides with vertical lines and L-shaped connectors showing folder hierarchy (VS Code-style)
 - **Drag region** — Title bar is fully draggable
+
+### Context Menu
+- **Dynamic right-click menu** — VS Code-style context menu built with `createPortal`, not clipped by scrollbars
+- **File-type-aware items** — Menu items change based on file type (image files show preview options, folders show Open in Terminal)
+- **Actions:**
+  - **Reveal in Explorer** — Opens the file/folder location in Windows File Explorer
+  - **Copy Path** / **Copy Relative Path** — Copies full or workspace-relative path to clipboard
+  - **Open in Terminal** — Opens a new terminal at the selected folder's location (folders only)
+  - **Find in Folder** — Opens search scoped to the selected folder (folders only)
+  - **Open Preview** / **Open Image Preview** — Opens file in preview mode (image/non-code files)
+  - **Open to the Side** — Opens file in a split editor group
+  - **Cut, Copy, Paste, Delete, Rename, Download** — Standard file operations
+- **Edge-aware positioning** — Automatically repositions if menu goes off-screen
 
 ### Menu Bar
 - **VS Code-style menu bar** with 8 dropdown menus:
@@ -60,9 +73,15 @@ Dar Studio is a full-featured code editor for Windows, built from the ground up 
 - **Smart directory filtering** — Skips `.git`, `node_modules`, `dist`, `out`, `build`, `.venv`, `__pycache__`, `.vite`, `.cache`, and all dotfiles
 
 ### Terminal
-- **Integrated terminal** — Full terminal powered by `node-pty`
+- **Integrated terminal** — Full terminal powered by `node-pty` with Windows ConPTY API
 - **Multi-shell support** — PowerShell, CMD, Git Bash, WSL detection
-- **Tab management** — Create and switch between multiple terminal instances
+- **Multi-tab management** — Create, switch, rename, and close multiple terminal instances
+- **Split panes** — Horizontal and vertical split layout with resizable draggable separators
+- **WebGL rendering** — GPU-accelerated rendering via `@xterm/addon-webgl` for smooth performance
+- **Named terminals** — Auto-named (PowerShell 1, 2, etc.) with custom rename support
+- **Unicode 11 support** — Full Unicode rendering via `@xterm/addon-unicode11`
+- **Search** — Terminal search with `@xterm/addon-search`
+- **Kill all** — Clean up all terminal processes on window close
 
 ### UI / Layout
 - **Resizable panels** — Sidebar, editor, and bottom panel are all resizable with draggable separators
@@ -140,7 +159,7 @@ dar-studio/
 │   │   ├── index.ts            # Window creation, IPC setup
 │   │   ├── file-system.ts      # File system IPC handlers
 │   │   ├── search-files.ts     # Search across files
-│   │   ├── shell-manager.ts    # node-pty terminal
+│   │   ├── shell-manager.ts    # node-pty terminal (multi-tab, named ConPTY)
 │   │   └── window-controls.ts  # Min/Max/Close handlers
 │   ├── preload/
 │   │   └── index.ts            # contextBridge IPC exposure
@@ -149,7 +168,9 @@ dar-studio/
 │       ├── main.tsx            # React entry point
 │       ├── assets/             # Icons imported by Vite
 │       ├── components/
-│       │   └── FileTree/       # FileTree + FileTreeNode
+│       │   ├── ContextMenu/    # ContextMenuPortal (createPortal-based dynamic menu)
+│       │   ├── FileTree/       # FileTree + FileTreeNode + contextMenuItems
+│       │   └── Terminal/       # TerminalView, TerminalTabBar, TerminalSplit
 │       ├── hooks/
 │       │   └── useFileSystem.ts
 │       ├── layout/
@@ -189,7 +210,10 @@ dar-studio/
 | `fs:*` | Renderer → Main | File read/write/create/delete/rename |
 | `dialog:*` | Renderer → Main | Native open/save dialogs |
 | `search:inFiles` | Renderer → Main | Full-text search across files |
-| `terminal:*` | Both directions | Terminal create/write/resize/kill/data |
+| `terminal:*` | Both directions | Terminal create/write/resize/kill/data/list/rename/killAll |
+| `shell:revealInExplorer` | Renderer → Main | Open file/folder in Windows File Explorer |
+| `app:copyToClipboard` | Renderer → Main | Copy text to system clipboard |
+| `app:getLastPath` / `app:setLastPath` | Renderer → Main | Persist last opened folder path |
 
 <br>
 
@@ -244,6 +268,8 @@ A chronological list of bugs and issues resolved during development.
 | **Children not refreshing after nested create** | Added `refreshKey` prop propagation to `FileTreeNode` — triggers `loadChildren()` re-run when `refreshKey` changes |
 | **File selection highlight** | Added `selectedPath` state in `FileTree`, visual highlight via `bg-active` class |
 | **Create in selected folder** | Header `+` buttons create inside the currently selected directory, fallback to `rootPath` |
+| **Tree connecting lines** | Added indent guides with absolute-positioned divs for vertical lines + L-shaped connectors — formula: `ancestorVerticalLines[i] = parent.ancestorVerticalLines[i] + [!parent.isLast]` |
+| **Dynamic context menu** | Replaced `@radix-ui/react-context-menu` with custom `createPortal`-based `ContextMenuPortal` — prevents clipping by file tree scrollbar, supports file-type-aware items |
 
 ### Search
 | Fix | Description |
@@ -260,6 +286,16 @@ A chronological list of bugs and issues resolved during development.
 | **MenuBar Open File not working** | `openFile()` dialog result now handled — reads and opens selected files in editor |
 | **MenuBar Open Folder not working** | `openFolder()` dialog result now handled — sets `rootPath`, refreshes file tree, persists last path |
 
+### Terminal
+| Fix | Description |
+|-----|-------------|
+| **Full terminal rewrite** | Replaced single-instance terminal with multi-tab system — `terminalStore.ts` (Zustand), `TerminalView.tsx`, `TerminalTabBar.tsx`, `TerminalSplit.tsx` |
+| **Split pane support** | Added horizontal/vertical split layout with `react-resizable-panels` — each split is a `<Group>` containing `TerminalView` instances |
+| **WebGL rendering** | Installed `@xterm/addon-webgl` for GPU-accelerated terminal rendering |
+| **Named terminals** | Updated `shell-manager.ts` — each terminal has a `name` + `metadata` field, auto-named as "PowerShell 1, 2..." |
+| **Terminal tab switch bug** | `addInstance` always sets `activeTerminalId`, added check in `TerminalSplit` branch-1, added `React.key` prop for proper remount |
+| **eval warning** | `shell-manager.ts` uses `eval('require')('node-pty')` to bypass Rollup bundling of `.node` modules — noted as expected |
+
 ### Persistence
 | Fix | Description |
 |-----|-------------|
@@ -274,6 +310,66 @@ A chronological list of bugs and issues resolved during development.
 | **README screenshot paths** | Fixed references to non-existent `1.png–5.png` → actual screenshot filenames |
 | **"Developed by Mahadi"** | Added to README hero title |
 | **Fixed footer credit** | "Made with ❤️ by Mahadi" at bottom of README |
+
+<br>
+
+## Changelog
+
+### v1.1.0 (Current)
+*New features and improvements over v1.0.0:*
+
+**Terminal Overhaul**
+- Multi-tab terminal management with create, switch, rename, and close
+- Horizontal/vertical split panes with draggable separators
+- WebGL GPU-accelerated rendering via `@xterm/addon-webgl`
+- Named ConPTY terminals (auto-named "PowerShell 1, 2...")
+- Unicode 11 support and terminal search
+
+**File Tree Enhancements**
+- Indent guides with connecting lines — vertical lines + L-shaped connectors showing folder hierarchy
+
+**Dynamic Context Menu**
+- Replaced Radix context menu with custom `createPortal`-based menu (no scrollbar clipping)
+- File-type-aware items: images show preview options, folders show Open in Terminal
+- Reveal in Explorer, Copy Path, Copy Relative Path
+- Open in Terminal, Find in Folder
+- Open Preview, Open Image Preview, Open to the Side
+- Cut, Copy, Paste, Delete, Rename, Download
+- Edge-aware repositioning
+
+### v1.0.0
+*Initial release of Dar Studio.*
+
+**Editor**
+- Monaco Editor with syntax highlighting, IntelliSense, multi-cursor, bracket matching
+- Multi-tab editing with open/manage multiple files
+- Auto language detection for 80+ file extensions
+- Adjustable font size, tab size, word wrap, minimap, line numbers
+
+**File Management**
+- Tree-based file explorer with expand/collapse
+- Create, rename, delete files and folders
+- Right-click context menu (Radix-based)
+- Selection highlight and create-in-selected-folder
+- Debounced real-time search with case-sensitive toggle, result count, directory skip patterns
+
+**Menu Bar**
+- VS Code-style menu bar: File, Edit, Selection, View, Go, Run, Terminal, Help
+- Click-to-open with hover-to-navigate between menus
+
+**Terminal**
+- Basic integrated terminal via `node-pty`
+- Multi-shell support: PowerShell, CMD, Git Bash, WSL
+
+**UI / Layout**
+- Resizable panels (sidebar, editor, bottom panel)
+- Activity Bar for quick switching
+- Bottom Panel with Terminal / Output / Problems tabs
+- Status Bar with cursor position, language, encoding, file path
+- Custom title bar with window controls
+- VS Code-inspired dark theme
+- Collapsible sidebar and bottom panel
+- Last opened folder persistence across restarts
 
 <br>
 
