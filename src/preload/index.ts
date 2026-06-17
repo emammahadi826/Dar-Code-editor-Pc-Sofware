@@ -29,6 +29,10 @@ contextBridge.exposeInMainWorld('electron', {
   searchInFiles: (p: { rootPath: string; query: string; caseSensitive?: boolean; maxResults?: number }) =>
     ipcRenderer.invoke('search:inFiles', p),
 
+  // Shell / Clipboard
+  revealInExplorer: (targetPath: string) => ipcRenderer.invoke('shell:revealInExplorer', targetPath),
+  copyToClipboard: (text: string) => ipcRenderer.invoke('app:copyToClipboard', text),
+
   // Terminal
   terminal: {
     create: (shell: string) => ipcRenderer.invoke('terminal:create', shell),

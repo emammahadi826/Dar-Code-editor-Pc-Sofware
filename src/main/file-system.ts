@@ -1,4 +1,4 @@
-import { ipcMain, dialog, app } from 'electron'
+import { ipcMain, dialog, app, shell, clipboard } from 'electron'
 import fs from 'fs'
 import path from 'path'
 
@@ -111,6 +111,18 @@ export function registerFileSystem() {
     try {
       const p = path.join(app.getPath('userData'), 'last-path.json')
       fs.writeFileSync(p, JSON.stringify(dirPath), 'utf-8')
+    } catch {}
+  })
+
+  ipcMain.handle('shell:revealInExplorer', async (_, targetPath: string) => {
+    try {
+      shell.showItemInFolder(targetPath)
+    } catch {}
+  })
+
+  ipcMain.handle('app:copyToClipboard', async (_, text: string) => {
+    try {
+      clipboard.writeText(text)
     } catch {}
   })
 }

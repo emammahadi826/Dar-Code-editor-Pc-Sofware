@@ -2,11 +2,12 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { FileEntry } from '../../types'
 import { ChevronRight, ChevronDown } from 'lucide-react'
 import { Icon } from '@iconify/react'
-import * as ContextMenu from '@radix-ui/react-context-menu'
 
 interface FileTreeNodeProps {
   entry: FileEntry
   depth: number
+  isLast: boolean
+  ancestorVerticalLines: boolean[]
   expandedDirs: Set<string>
   onToggle: (path: string, isExpanded: boolean) => void
   onFileSelect: (path: string, name: string) => void
@@ -20,6 +21,7 @@ interface FileTreeNodeProps {
   selectedPath: string | null
   onSelect: (path: string) => void
   refreshKey: number
+  onContextMenu?: (e: React.MouseEvent, entry: FileEntry) => void
 }
 
 const extIconMap: Record<string, string> = {
@@ -79,7 +81,14 @@ function getFileIconName(name: string): string {
   return extIconMap[ext] || 'vscode-icons:default-file'
 }
 
-export function FileTreeNode({ entry, depth, expandedDirs, onToggle, onFileSelect, onCreateFile, onCreateFolder, onRename, onDelete, creating, onCreateSubmit, onCancelCreate, selectedPath, onSelect, refreshKey }: FileTreeNodeProps) {
+export function FileTreeNode({
+  entry, depth, isLast, ancestorVerticalLines,
+  expandedDirs, onToggle, onFileSelect,
+  onCreateFile, onCreateFolder, onRename, onDelete,
+  creating, onCreateSubmit, onCancelCreate,
+  selectedPath, onSelect, refreshKey,
+  onContextMenu,
+}: FileTreeNodeProps) {
   const [children, setChildren] = useState<FileEntry[]>([])
   const [loaded, setLoaded] = useState(false)
   const isExpanded = expandedDirs.has(entry.path)
@@ -121,149 +130,161 @@ export function FileTreeNode({ entry, depth, expandedDirs, onToggle, onFileSelec
     }
   }, [entry.path, onCreateFile, onCreateFolder, onSelect])
 
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    onSelect(entry.path)
+    onContextMenu?.(e, entry)
+  }, [entry.path, onSelect, onContextMenu, entry])
+
   const isSelected = entry.path === selectedPath
   const isCreatingHere = creating?.parentPath === entry.path
 
   return (
-    <ContextMenu.Root>
-      <ContextMenu.Trigger>
-        <div>
-          <div
-            className={`flex items-center gap-1.5 py-1 cursor-pointer group select-none rounded-sm ${
-              isSelected ? 'bg-active text-white' : 'hover:bg-hover text-sidepanel-text'
-            }`}
-            style={{ paddingLeft: `${8 + depth * 14}px` }}
-            onClick={handleClick}
-            onContextMenu={(e) => {
-              e.preventDefault()
-              onSelect(entry.path)
-            }}
-          >
-            {entry.isDirectory && (
-              <span className="w-4 h-4 flex items-center justify-center shrink-0">
-                {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-              </span>
-            )}
-            {!entry.isDirectory && <span className="w-4" />}
-            <Icon
-              icon={entry.isDirectory
-                ? (isExpanded ? 'vscode-icons:default-folder-opened' : 'vscode-icons:default-folder')
-                : getFileIconName(entry.name)
-              }
-              width={18}
-              height={18}
-              className="shrink-0"
-            />
-            <span className="truncate text-sm">{entry.name}</span>
-            {entry.isDirectory && (
-              <div className="ml-auto hidden group-hover:flex items-center gap-0.5 pr-1">
-                <button
-                  onClick={handleCreateClick('file')}
-                  className="p-0.5 text-sidepanel-text hover:text-white rounded hover:bg-[#3c3c3c] transition-colors"
-                  title="New File"
-                >
-                  <Icon icon="vscode-icons:default-file" width={14} height={14} />
-                </button>
-                <button
-                  onClick={handleCreateClick('folder')}
-                  className="p-0.5 text-sidepanel-text hover:text-white rounded hover:bg-[#3c3c3c] transition-colors"
-                  title="New Folder"
-                >
-                  <Icon icon="vscode-icons:default-folder" width={14} height={14} />
-                </button>
-              </div>
-            )}
-          </div>
-
-          {isCreatingHere && (
+    <div>
+      <div
+        className={`relative flex items-center py-[3px] cursor-pointer group select-none rounded-sm ${
+          isSelected ? 'bg-active text-white' : 'hover:bg-hover text-sidepanel-text'
+        }`}
+        style={{ paddingLeft: `${8 + depth * 14}px` }}
+        onClick={handleClick}
+        onContextMenu={handleContextMenu}
+      >
+        {ancestorVerticalLines.map((show, idx) =>
+          show && (
             <div
-              className="flex items-center gap-1.5 py-1"
-              style={{ paddingLeft: `${8 + (depth + 1) * 14}px` }}
-            >
-              <Icon
-                icon={creating.type === 'folder' ? 'vscode-icons:default-folder' : 'vscode-icons:default-file'}
-                width={18}
-                height={18}
-              />
-              <input
-                autoFocus
-                type="text"
-                placeholder={creating.type === 'file' ? 'filename.ext' : 'folder-name'}
-                className="flex-1 bg-[#3c3c3c] text-sm text-editor-text px-2 py-1 border border-[#007acc] outline-none rounded"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') onCreateSubmit((e.target as HTMLInputElement).value)
-                  if (e.key === 'Escape') onCancelCreate()
-                }}
-                onBlur={(e) => {
-                  if (e.target.value) onCreateSubmit(e.target.value)
-                  else onCancelCreate()
-                }}
-              />
-            </div>
-          )}
-
-          {entry.isDirectory && isExpanded && loaded && children.map((child) => (
-            <FileTreeNode
-              key={child.path}
-              entry={child}
-              depth={depth + 1}
-              expandedDirs={expandedDirs}
-              onToggle={onToggle}
-              onFileSelect={onFileSelect}
-              onCreateFile={onCreateFile}
-              onCreateFolder={onCreateFolder}
-              onRename={onRename}
-              onDelete={onDelete}
-              creating={creating}
-              onCreateSubmit={onCreateSubmit}
-              onCancelCreate={onCancelCreate}
-              selectedPath={selectedPath}
-              onSelect={onSelect}
-              refreshKey={refreshKey}
+              key={idx}
+              className="absolute top-0 bottom-0 w-px bg-[#3c3c3c]"
+              style={{ left: `${8 + idx * 14 + 7}px` }}
             />
-          ))}
-        </div>
-      </ContextMenu.Trigger>
+          )
+        )}
 
-      <ContextMenu.Content className="bg-[#252526] border border-[#3c3c3c] rounded shadow-xl py-1 min-w-[180px]">
-        <ContextMenu.Item
-          className="text-sm text-sidepanel-text px-3 py-1.5 cursor-pointer hover:bg-[#094771] hover:text-white outline-none flex items-center gap-2"
-          onClick={() => onSelect(entry.path)}
-        >
-          <Icon icon={entry.isDirectory ? 'vscode-icons:default-folder-opened' : getFileIconName(entry.name)} width={16} height={16} />
-          {entry.name}
-        </ContextMenu.Item>
-        <ContextMenu.Separator className="h-px bg-[#3c3c3c] mx-2 my-1" />
-        <ContextMenu.Item
-          className="text-sm text-sidepanel-text px-3 py-1.5 cursor-pointer hover:bg-[#094771] hover:text-white outline-none"
-          onClick={() => onRename(entry.path, entry.name)}
-        >
-          Rename
-        </ContextMenu.Item>
-        <ContextMenu.Item
-          className="text-sm text-red-400 px-3 py-1.5 cursor-pointer hover:bg-[#094771] hover:text-white outline-none"
-          onClick={() => onDelete(entry.path)}
-        >
-          Delete
-        </ContextMenu.Item>
-        {entry.isDirectory && (
+        {depth > 0 && (
           <>
-            <ContextMenu.Separator className="h-px bg-[#3c3c3c] mx-2 my-1" />
-            <ContextMenu.Item
-              className="text-sm text-sidepanel-text px-3 py-1.5 cursor-pointer hover:bg-[#094771] hover:text-white outline-none"
-              onClick={() => onCreateFile(entry.path)}
-            >
-              New File
-            </ContextMenu.Item>
-            <ContextMenu.Item
-              className="text-sm text-sidepanel-text px-3 py-1.5 cursor-pointer hover:bg-[#094771] hover:text-white outline-none"
-              onClick={() => onCreateFolder(entry.path)}
-            >
-              New Folder
-            </ContextMenu.Item>
+            <div
+              className="absolute w-px bg-[#3c3c3c]"
+              style={{ left: `${8 + (depth - 1) * 14 + 7}px`, top: 0, bottom: '50%' }}
+            />
+            {!isLast && (
+              <div
+                className="absolute w-px bg-[#3c3c3c]"
+                style={{ left: `${8 + (depth - 1) * 14 + 7}px`, top: '50%', bottom: 0 }}
+              />
+            )}
+            <div
+              className="absolute h-px bg-[#3c3c3c]"
+              style={{ left: `${8 + (depth - 1) * 14 + 7}px`, width: '7px', top: '50%' }}
+            />
           </>
         )}
-      </ContextMenu.Content>
-    </ContextMenu.Root>
+
+        {entry.isDirectory && (
+          <span className="w-4 h-4 flex items-center justify-center shrink-0">
+            {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+          </span>
+        )}
+        {!entry.isDirectory && <span className="w-4" />}
+        <Icon
+          icon={entry.isDirectory
+            ? (isExpanded ? 'vscode-icons:default-folder-opened' : 'vscode-icons:default-folder')
+            : getFileIconName(entry.name)
+          }
+          width={18}
+          height={18}
+          className="shrink-0"
+        />
+        <span className="truncate text-sm ml-1">{entry.name}</span>
+        {entry.isDirectory && (
+          <div className="ml-auto hidden group-hover:flex items-center gap-0.5 pr-1">
+            <button
+              onClick={handleCreateClick('file')}
+              className="p-0.5 text-sidepanel-text hover:text-white rounded hover:bg-[#3c3c3c] transition-colors"
+              title="New File"
+            >
+              <Icon icon="vscode-icons:default-file" width={14} height={14} />
+            </button>
+            <button
+              onClick={handleCreateClick('folder')}
+              className="p-0.5 text-sidepanel-text hover:text-white rounded hover:bg-[#3c3c3c] transition-colors"
+              title="New Folder"
+            >
+              <Icon icon="vscode-icons:default-folder" width={14} height={14} />
+            </button>
+          </div>
+        )}
+      </div>
+
+      {isCreatingHere && (
+        <div
+          className="relative flex items-center gap-1.5 py-[3px]"
+          style={{ paddingLeft: `${8 + (depth + 1) * 14}px` }}
+        >
+          {[...ancestorVerticalLines, !isLast].map((show, idx) =>
+            show && (
+              <div
+                key={idx}
+                className="absolute top-0 bottom-0 w-px bg-[#3c3c3c]"
+                style={{ left: `${8 + idx * 14 + 7}px` }}
+              />
+            )
+          )}
+          {depth + 1 > 0 && (
+            <>
+              <div
+                className="absolute w-px bg-[#3c3c3c]"
+                style={{ left: `${8 + depth * 14 + 7}px`, top: 0, bottom: '50%' }}
+              />
+              <div
+                className="absolute h-px bg-[#3c3c3c]"
+                style={{ left: `${8 + depth * 14 + 7}px`, width: '7px', top: '50%' }}
+              />
+            </>
+          )}
+          <Icon
+            icon={creating?.type === 'folder' ? 'vscode-icons:default-folder' : 'vscode-icons:default-file'}
+            width={18}
+            height={18}
+          />
+          <input
+            autoFocus
+            type="text"
+            placeholder={creating?.type === 'file' ? 'filename.ext' : 'folder-name'}
+            className="flex-1 bg-[#3c3c3c] text-sm text-editor-text px-2 py-1 border border-[#007acc] outline-none rounded"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') onCreateSubmit((e.target as HTMLInputElement).value)
+              if (e.key === 'Escape') onCancelCreate()
+            }}
+            onBlur={(e) => {
+              if (e.target.value) onCreateSubmit(e.target.value)
+              else onCancelCreate()
+            }}
+          />
+        </div>
+      )}
+
+      {entry.isDirectory && isExpanded && loaded && children.map((child, idx) => (
+        <FileTreeNode
+          key={child.path}
+          entry={child}
+          depth={depth + 1}
+          isLast={idx === children.length - 1}
+          ancestorVerticalLines={[...ancestorVerticalLines, !isLast]}
+          expandedDirs={expandedDirs}
+          onToggle={onToggle}
+          onFileSelect={onFileSelect}
+          onCreateFile={onCreateFile}
+          onCreateFolder={onCreateFolder}
+          onRename={onRename}
+          onDelete={onDelete}
+          creating={creating}
+          onCreateSubmit={onCreateSubmit}
+          onCancelCreate={onCancelCreate}
+          selectedPath={selectedPath}
+          onSelect={onSelect}
+          refreshKey={refreshKey}
+          onContextMenu={onContextMenu}
+        />
+      ))}
+    </div>
   )
 }

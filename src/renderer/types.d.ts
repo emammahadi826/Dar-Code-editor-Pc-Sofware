@@ -64,6 +64,9 @@ export interface ElectronAPI {
 
   searchInFiles: (p: { rootPath: string; query: string; caseSensitive?: boolean; maxResults?: number }) => Promise<SearchResult[]>
 
+  revealInExplorer: (targetPath: string) => Promise<void>
+  copyToClipboard: (text: string) => Promise<void>
+
   terminal: TerminalAPI
 }
 

@@ -2,6 +2,9 @@ import React, { useState, useCallback, useEffect } from 'react'
 import { FileTreeNode } from './FileTreeNode'
 import { FileEntry } from '../../types'
 import { useAppStore } from '../../store/appStore'
+import { useTerminalStore } from '../../store/terminalStore'
+import { ContextMenuPortal, ContextMenuItem } from '../ContextMenu/ContextMenuPortal'
+import { buildContextMenuItems, ContextMenuCallbacks } from './contextMenuItems'
 import { Icon } from '@iconify/react'
 import { Plus, FolderPlus, RotateCw } from 'lucide-react'
 
@@ -19,6 +22,7 @@ export function FileTree({ rootPath, onFileSelect }: FileTreeProps) {
   const [creating, setCreating] = useState<{ parentPath: string; type: 'file' | 'folder' } | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
   const [selectedPath, setSelectedPath] = useState<string | null>(null)
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; entry: FileEntry } | null>(null)
 
   const loadEntries = useCallback(async (dirPath: string) => {
     if (!window.electron) return
@@ -109,6 +113,88 @@ export function FileTree({ rootPath, onFileSelect }: FileTreeProps) {
     addOutputLog('[FS] Refreshed file tree')
   }, [addOutputLog])
 
+  const handleContextMenu = useCallback((e: React.MouseEvent, entry: FileEntry) => {
+    setCtxMenu({ x: e.clientX, y: e.clientY, entry })
+  }, [])
+
+  const handleCloseContextMenu = useCallback(() => {
+    setCtxMenu(null)
+  }, [])
+
+  const getEntryParentPath = useCallback((entry: FileEntry): string => {
+    return entry.path.substring(0, entry.path.lastIndexOf('\\'))
+  }, [])
+
+  const isDirectory = useCallback((path: string): boolean => {
+    if (path === rootPath) return true
+    return entries.some(e => e.path === path && e.isDirectory) || false
+  }, [rootPath, entries])
+
+  // Context menu callbacks
+  const ctxCallbacks: ContextMenuCallbacks = {
+    onCreateFile: (parentPath) => {
+      handleCreateFile(parentPath)
+    },
+    onCreateFolder: (parentPath) => {
+      handleCreateFolder(parentPath)
+    },
+    onRevealInExplorer: async (path) => {
+      if (window.electron?.revealInExplorer) {
+        await window.electron.revealInExplorer(path)
+      }
+    },
+    onOpenInTerminal: async (path) => {
+      const shellPath = (await window.electron?.terminal?.getShells())?.[0]?.path
+      if (!shellPath) return
+      const result = await window.electron?.terminal?.createNamed(shellPath, undefined, path)
+      if (result && result.id > 0) {
+        const shellInfo = (await window.electron?.terminal?.getShells())?.find(s => s.path === shellPath)
+        useTerminalStore.getState().addInstance({
+          id: result.id,
+          name: result.name,
+          shellPath: result.shellPath,
+          shellName: result.shellName,
+          shellIcon: shellInfo?.icon || 'terminal',
+          cwd: result.cwd,
+          createdAt: result.createdAt,
+        })
+      }
+    },
+    onCopyPath: async (path) => {
+      if (window.electron?.copyToClipboard) {
+        await window.electron.copyToClipboard(path)
+        addOutputLog(`[Clipboard] Copied path: ${path}`)
+      }
+    },
+    onCopyRelativePath: async (path) => {
+      if (!window.electron?.copyToClipboard) return
+      const relative = path.replace(rootPath, '').replace(/^[\\\/]/, '')
+      await window.electron.copyToClipboard(relative)
+      addOutputLog(`[Clipboard] Copied relative path: ${relative}`)
+    },
+    onRename: (path, name) => {
+      handleRename(path, name)
+    },
+    onDelete: (path) => {
+      handleDelete(path)
+    },
+    onFindInFolder: (path) => {
+      addOutputLog(`[Search] Find in folder: ${path} (not yet implemented)`)
+    },
+    onOpenPreview: (path) => {
+      addOutputLog(`[Preview] Open preview: ${path} (not yet implemented)`)
+    },
+    onOpenImagePreview: (path) => {
+      addOutputLog(`[Preview] Open image: ${path} (not yet implemented)`)
+    },
+    isDirectory,
+    rootPath,
+  }
+
+  const ctxMenuItems: ContextMenuItem[] = ctxMenu
+    ? buildContextMenuItems(ctxMenu.entry, getEntryParentPath(ctxMenu.entry), ctxCallbacks)
+    : []
+
   const createParent = getCreateParent()
   const createParentName = createParent === rootPath
     ? (rootPath.split('\\').pop() || rootPath.split('/').pop() || 'root')
@@ -156,7 +242,8 @@ export function FileTree({ rootPath, onFileSelect }: FileTreeProps) {
       </div>
 
       {creating && creating.parentPath === rootPath && (
-        <div className="flex items-center gap-1.5 px-3 py-1.5" style={{ paddingLeft: '10px' }}>
+        <div className="relative flex items-center gap-1.5 py-[3px]" style={{ paddingLeft: '8px' }}>
+          <span className="w-4" />
           <Icon
             icon={creating.type === 'folder' ? 'vscode-icons:default-folder' : 'vscode-icons:default-file'}
             width={18}
@@ -179,11 +266,13 @@ export function FileTree({ rootPath, onFileSelect }: FileTreeProps) {
         </div>
       )}
 
-      {entries.map((entry) => (
+      {entries.map((entry, idx) => (
         <FileTreeNode
           key={entry.path}
           entry={renaming?.path === entry.path ? { ...entry, name: '' } : entry}
           depth={0}
+          isLast={idx === entries.length - 1}
+          ancestorVerticalLines={[]}
           expandedDirs={expandedDirs}
           onToggle={handleToggle}
           onFileSelect={onFileSelect}
@@ -197,11 +286,13 @@ export function FileTree({ rootPath, onFileSelect }: FileTreeProps) {
           selectedPath={selectedPath}
           onSelect={handleSelect}
           refreshKey={refreshKey}
+          onContextMenu={handleContextMenu}
         />
       ))}
 
       {renaming && (
-        <div className="flex items-center gap-1.5 px-3 py-1.5" style={{ paddingLeft: '28px' }}>
+        <div className="relative flex items-center gap-1.5 py-[3px]" style={{ paddingLeft: `${8 + 0 * 14}px` }}>
+          <span className="w-4" />
           <input
             autoFocus
             type="text"
@@ -218,6 +309,14 @@ export function FileTree({ rootPath, onFileSelect }: FileTreeProps) {
           />
         </div>
       )}
+
+      <ContextMenuPortal
+        visible={!!ctxMenu}
+        x={ctxMenu?.x ?? 0}
+        y={ctxMenu?.y ?? 0}
+        items={ctxMenuItems}
+        onClose={handleCloseContextMenu}
+      />
     </div>
   )
 }
