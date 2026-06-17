@@ -301,31 +301,24 @@ export function FileTree({ rootPath, onFileSelect }: FileTreeProps) {
     : (createParent.split('\\').pop() || createParent.split('/').pop() || 'folder')
 
   const handleContainerClick = useCallback((e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
+    const target = e.target as HTMLElement
+    if (!target.closest('[data-file-row]')) {
       setSelectedPath(null)
     }
   }, [])
 
-  const handleRootClick = useCallback(() => {
-    setSelectedPath(null)
-  }, [])
-
   if (loading) {
-    return <div className="text-sidepanel-text text-sm p-3 opacity-60">Loading...</div>
+    return <div className="text-sidepanel-text text-sm p-3 opacity-60 h-full">Loading...</div>
   }
 
   return (
     <div
-      className="text-sm"
-      onClick={handleContainerClick}
+      className="text-sm h-full flex flex-col overflow-y-auto"
       onDragOver={(e) => { if (draggedPath) e.preventDefault() }}
       onDrop={handleRootDrop}
       onDragEnd={handleDragEnd}
     >
-      <div
-        className="flex items-center justify-between px-3 py-1.5 mb-1 cursor-pointer"
-        onClick={handleRootClick}
-      >
+      <div className="flex items-center justify-between px-3 py-1.5 mb-1">
         <span className="text-sidepanel-header text-sm font-semibold uppercase tracking-wider truncate">
           {rootPath.split('\\').pop() || rootPath.split('/').pop()}
         </span>
@@ -436,6 +429,8 @@ export function FileTree({ rootPath, onFileSelect }: FileTreeProps) {
           />
         </div>
       )}
+
+      <div className="flex-1 min-h-[2px]" onClick={handleContainerClick} />
 
       <ContextMenuPortal
         visible={!!ctxMenu}

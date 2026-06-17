@@ -226,6 +226,7 @@ export function FileTreeNode({
     <div>
       <div
         ref={nodeRef}
+        data-file-row
         className={rowClass}
         style={{ paddingLeft: `${8 + depth * 14}px` }}
         onClick={handleClick}

@@ -98,7 +98,7 @@ export function SidePanel() {
       <div className="flex-1 overflow-y-auto">
         {activeModule === 'Files' && (
           rootPath ? (
-            <div className="p-3">
+            <div className="p-3 h-full">
               <FileTree rootPath={rootPath} onFileSelect={handleFileSelect} />
             </div>
           ) : (
