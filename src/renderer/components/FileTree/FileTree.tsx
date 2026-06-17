@@ -8,6 +8,11 @@ import { buildContextMenuItems, ContextMenuCallbacks } from './contextMenuItems'
 import { Icon } from '@iconify/react'
 import { Plus, FolderPlus, RotateCw } from 'lucide-react'
 
+interface DropState {
+  targetPath: string
+  position: 'before' | 'after' | 'inside'
+}
+
 interface FileTreeProps {
   rootPath: string
   onFileSelect: (path: string, name: string) => void
@@ -23,6 +28,8 @@ export function FileTree({ rootPath, onFileSelect }: FileTreeProps) {
   const [refreshKey, setRefreshKey] = useState(0)
   const [selectedPath, setSelectedPath] = useState<string | null>(null)
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; entry: FileEntry } | null>(null)
+  const [draggedPath, setDraggedPath] = useState<string | null>(null)
+  const [dropState, setDropState] = useState<DropState | null>(null)
 
   const loadEntries = useCallback(async (dirPath: string) => {
     if (!window.electron) return
@@ -121,6 +128,97 @@ export function FileTree({ rootPath, onFileSelect }: FileTreeProps) {
     setCtxMenu(null)
   }, [])
 
+  const handleDragStart = useCallback((entry: FileEntry) => {
+    setDraggedPath(entry.path)
+  }, [])
+
+  const handleDragEnd = useCallback(() => {
+    setDraggedPath(null)
+    setDropState(null)
+  }, [])
+
+  const handleDragOver = useCallback((entry: FileEntry, position: 'before' | 'after' | 'inside') => {
+    setDropState({ targetPath: entry.path, position })
+  }, [])
+
+  const handleDragLeave = useCallback(() => {
+    setDropState(null)
+  }, [])
+
+  const handleDrop = useCallback(async (targetEntry: FileEntry, position: 'before' | 'after' | 'inside') => {
+    if (!draggedPath) return
+
+    const draggedName = draggedPath.split('\\').pop() || draggedPath.split('/').pop() || ''
+
+    let newParent: string
+    if (position === 'inside' && targetEntry.isDirectory) {
+      newParent = targetEntry.path
+    } else {
+      newParent = getEntryParentPath(targetEntry.path)
+    }
+
+    const newPath = newParent + '\\' + draggedName
+
+    if (newPath === draggedPath) {
+      addOutputLog(`[FS] ${draggedName} is already in this location`)
+      setDraggedPath(null)
+      setDropState(null)
+      return
+    }
+
+    if (draggedPath.startsWith(newParent + '\\')) {
+      const relPath = draggedPath.slice(newParent.length + 1)
+      if (relPath.startsWith(draggedName + '\\')) {
+        addOutputLog(`[FS] Cannot move a folder into itself`)
+        setDraggedPath(null)
+        setDropState(null)
+        return
+      }
+    }
+
+    const destExists = await window.electron?.exists(newPath)
+    if (destExists) {
+      addOutputLog(`[FS] Cannot move: "${draggedName}" already exists at destination`)
+      setDraggedPath(null)
+      setDropState(null)
+      return
+    }
+
+    await window.electron?.rename(draggedPath, newPath)
+    addOutputLog(`[FS] Moved: ${draggedName}`)
+
+    const openTabs = useAppStore.getState().openTabs
+    const tabToUpdate = openTabs.find(t => t.path === draggedPath)
+    if (tabToUpdate) {
+      useAppStore.getState().closeTab(draggedPath)
+    }
+
+    setDraggedPath(null)
+    setDropState(null)
+    setRefreshKey((k) => k + 1)
+  }, [draggedPath, addOutputLog])
+
+  const handleRootDrop = useCallback(async (e: React.DragEvent) => {
+    e.preventDefault()
+    if (!draggedPath) return
+
+    const draggedName = draggedPath.split('\\').pop() || draggedPath.split('/').pop() || ''
+    const newPath = rootPath + '\\' + draggedName
+
+    if (newPath === draggedPath) {
+      setDraggedPath(null)
+      setDropState(null)
+      return
+    }
+
+    await window.electron?.rename(draggedPath, newPath)
+    addOutputLog(`[FS] Moved: ${draggedName} → root`)
+
+    setDraggedPath(null)
+    setDropState(null)
+    setRefreshKey((k) => k + 1)
+  }, [draggedPath, rootPath, addOutputLog])
+
   const getEntryParentPath = useCallback((entry: FileEntry): string => {
     return entry.path.substring(0, entry.path.lastIndexOf('\\'))
   }, [])
@@ -207,7 +305,12 @@ export function FileTree({ rootPath, onFileSelect }: FileTreeProps) {
   }
 
   return (
-    <div className="text-sm">
+    <div
+      className="text-sm"
+      onDragOver={(e) => { if (draggedPath) e.preventDefault() }}
+      onDrop={handleRootDrop}
+      onDragEnd={handleDragEnd}
+    >
       <div className="flex items-center justify-between px-3 py-1.5 mb-1">
         <span className="text-sidepanel-header text-sm font-semibold uppercase tracking-wider truncate">
           {rootPath.split('\\').pop() || rootPath.split('/').pop()}
@@ -289,6 +392,14 @@ export function FileTree({ rootPath, onFileSelect }: FileTreeProps) {
           onSelect={handleSelect}
           refreshKey={refreshKey}
           onContextMenu={handleContextMenu}
+          draggedPath={draggedPath}
+          renaming={renaming}
+          dropState={dropState}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
         />
       ))}
 

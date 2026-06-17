@@ -1,7 +1,12 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { FileEntry } from '../../types'
 import { ChevronRight, ChevronDown } from 'lucide-react'
 import { Icon } from '@iconify/react'
+
+interface DropState {
+  targetPath: string
+  position: 'before' | 'after' | 'inside'
+}
 
 interface FileTreeNodeProps {
   entry: FileEntry
@@ -22,6 +27,14 @@ interface FileTreeNodeProps {
   onSelect: (path: string) => void
   refreshKey: number
   onContextMenu?: (e: React.MouseEvent, entry: FileEntry) => void
+  draggedPath: string | null
+  renaming: { path: string; name: string } | null
+  dropState: DropState | null
+  onDragStart: (entry: FileEntry) => void
+  onDragEnd: () => void
+  onDragOver: (entry: FileEntry, position: 'before' | 'after' | 'inside') => void
+  onDragLeave: () => void
+  onDrop: (entry: FileEntry, position: 'before' | 'after' | 'inside') => void
 }
 
 const extIconMap: Record<string, string> = {
@@ -88,10 +101,13 @@ export function FileTreeNode({
   creating, onCreateSubmit, onCancelCreate,
   selectedPath, onSelect, refreshKey,
   onContextMenu,
+  draggedPath, renaming, dropState,
+  onDragStart, onDragEnd, onDragOver, onDragLeave, onDrop,
 }: FileTreeNodeProps) {
   const [children, setChildren] = useState<FileEntry[]>([])
   const [loaded, setLoaded] = useState(false)
   const isExpanded = expandedDirs.has(entry.path)
+  const nodeRef = useRef<HTMLDivElement>(null)
 
   const loadChildren = useCallback(async () => {
     if (!window.electron || !entry.isDirectory) return
@@ -136,18 +152,90 @@ export function FileTreeNode({
     onContextMenu?.(e, entry)
   }, [entry.path, onSelect, onContextMenu, entry])
 
+  const handleDragStartEvent = useCallback((e: React.DragEvent) => {
+    e.dataTransfer.effectAllowed = 'move'
+    onDragStart(entry)
+  }, [entry, onDragStart])
+
+  const handleDragOverEvent = useCallback((e: React.DragEvent) => {
+    if (!draggedPath || draggedPath === entry.path) return
+    e.preventDefault()
+    e.stopPropagation()
+
+    const rect = e.currentTarget.getBoundingClientRect()
+    const y = e.clientY - rect.top
+    const height = rect.height
+    const threshold = Math.min(height * 0.25, 8)
+
+    let position: 'before' | 'after' | 'inside'
+    if (y < threshold) {
+      position = 'before'
+    } else if (y > height - threshold) {
+      position = 'after'
+    } else if (entry.isDirectory) {
+      position = 'inside'
+    } else {
+      position = 'after'
+    }
+
+    onDragOver(entry, position)
+  }, [draggedPath, entry, onDragOver])
+
+  const handleDragLeaveEvent = useCallback(() => {
+    onDragLeave()
+  }, [onDragLeave])
+
+  const handleDropEvent = useCallback((e: React.DragEvent) => {
+    if (!draggedPath) return
+    e.preventDefault()
+    e.stopPropagation()
+
+    const rect = e.currentTarget.getBoundingClientRect()
+    const y = e.clientY - rect.top
+    const height = rect.height
+    const threshold = Math.min(height * 0.25, 8)
+
+    let position: 'before' | 'after' | 'inside'
+    if (y < threshold) {
+      position = 'before'
+    } else if (y > height - threshold) {
+      position = 'after'
+    } else if (entry.isDirectory) {
+      position = 'inside'
+    } else {
+      position = 'after'
+    }
+
+    onDrop(entry, position)
+  }, [draggedPath, entry, onDrop])
+
   const isSelected = entry.path === selectedPath
   const isCreatingHere = creating?.parentPath === entry.path
+  const isDragging = draggedPath === entry.path
+  const isDropTarget = dropState?.targetPath === entry.path
+  const dropPos = isDropTarget ? dropState!.position : null
+
+  let rowClass = `relative flex items-center py-[3px] cursor-pointer group select-none rounded-sm ${
+    isSelected ? 'bg-active text-white' : 'hover:bg-hover text-sidepanel-text'
+  } ${isDragging ? 'opacity-40' : ''} ${
+    dropPos === 'inside' ? 'bg-accent-blue/10 ring-1 ring-accent-blue' : ''
+  }`
+  if (isDragging) rowClass = rowClass.replace('hover:bg-hover', '')
 
   return (
     <div>
       <div
-        className={`relative flex items-center py-[3px] cursor-pointer group select-none rounded-sm ${
-          isSelected ? 'bg-active text-white' : 'hover:bg-hover text-sidepanel-text'
-        }`}
+        ref={nodeRef}
+        className={rowClass}
         style={{ paddingLeft: `${8 + depth * 14}px` }}
         onClick={handleClick}
         onContextMenu={handleContextMenu}
+        draggable={!creating && !renaming}
+        onDragStart={handleDragStartEvent}
+        onDragEnd={onDragEnd}
+        onDragOver={handleDragOverEvent}
+        onDragLeave={handleDragLeaveEvent}
+        onDrop={handleDropEvent}
       >
         {ancestorVerticalLines.map((show, idx) =>
           show && (
@@ -211,6 +299,13 @@ export function FileTreeNode({
               <Icon icon="vscode-icons:default-folder" width={14} height={14} />
             </button>
           </div>
+        )}
+
+        {dropPos === 'before' && (
+          <div className="absolute top-0 left-0 right-0 h-0.5 bg-accent-blue pointer-events-none z-10" />
+        )}
+        {dropPos === 'after' && (
+          <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent-blue pointer-events-none z-10" />
         )}
       </div>
 
@@ -283,6 +378,13 @@ export function FileTreeNode({
           onSelect={onSelect}
           refreshKey={refreshKey}
           onContextMenu={onContextMenu}
+          draggedPath={draggedPath}
+          dropState={dropState}
+          onDragStart={onDragStart}
+          onDragEnd={onDragEnd}
+          onDragOver={onDragOver}
+          onDragLeave={onDragLeave}
+          onDrop={onDrop}
         />
       ))}
     </div>
