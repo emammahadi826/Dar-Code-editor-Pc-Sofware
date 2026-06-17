@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { FileEntry } from '../types'
+import { FileType } from '../utils/fileType'
 
 interface OpenTab {
   path: string
@@ -7,6 +8,8 @@ interface OpenTab {
   content: string
   isDirty: boolean
   language: string
+  fileType: FileType
+  mediaUrl?: string
 }
 
 interface AppState {
@@ -24,7 +27,7 @@ interface AppState {
 
   openTabs: OpenTab[]
   activeTab: string | null
-  openFile: (path: string, name: string, content: string, language: string) => void
+  openFile: (path: string, name: string, content: string, language: string, fileType?: FileType, mediaUrl?: string) => void
   closeTab: (path: string) => void
   setActiveTab: (path: string) => void
   updateTabContent: (path: string, content: string) => void
@@ -72,12 +75,12 @@ export const useAppStore = create<AppState>((set) => ({
 
   openTabs: [],
   activeTab: null,
-  openFile: (path, name, content, language) =>
+  openFile: (path, name, content, language, fileType = 'code', mediaUrl?) =>
     set((s) => {
       const exists = s.openTabs.find((t) => t.path === path)
       if (exists) return { activeTab: path }
       return {
-        openTabs: [...s.openTabs, { path, name, content, isDirty: false, language: language || detectLanguage(name) }],
+        openTabs: [...s.openTabs, { path, name, content, isDirty: false, language: language || detectLanguage(name), fileType, mediaUrl }],
         activeTab: path,
       }
     }),

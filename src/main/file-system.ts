@@ -25,6 +25,15 @@ export function registerFileSystem() {
     }
   })
 
+  ipcMain.handle('fs:readFileBase64', async (_, filePath: string) => {
+    try {
+      const buffer = fs.readFileSync(filePath)
+      return buffer.toString('base64')
+    } catch {
+      return null
+    }
+  })
+
   ipcMain.handle('fs:writeFile', async (_, filePath: string, content: string) => {
     try {
       fs.writeFileSync(filePath, content, 'utf-8')

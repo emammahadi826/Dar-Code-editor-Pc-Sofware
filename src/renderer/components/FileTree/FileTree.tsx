@@ -182,10 +182,12 @@ export function FileTree({ rootPath, onFileSelect }: FileTreeProps) {
       addOutputLog(`[Search] Find in folder: ${path} (not yet implemented)`)
     },
     onOpenPreview: (path) => {
-      addOutputLog(`[Preview] Open preview: ${path} (not yet implemented)`)
+      const name = path.split('\\').pop() || path.split('/').pop() || ''
+      onFileSelect(path, name)
     },
     onOpenImagePreview: (path) => {
-      addOutputLog(`[Preview] Open image: ${path} (not yet implemented)`)
+      const name = path.split('\\').pop() || path.split('/').pop() || ''
+      onFileSelect(path, name)
     },
     isDirectory,
     rootPath,

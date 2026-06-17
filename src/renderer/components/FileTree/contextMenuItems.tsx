@@ -1,7 +1,8 @@
 import React from 'react'
 import { FileEntry } from '../../types'
 import { ContextMenuItem } from '../ContextMenu/ContextMenuPortal'
-import { FileText, FolderPlus, ExternalLink, Terminal, Copy, Scissors, Clipboard, ClipboardPaste, FilePenLine, Trash2, Search, Image } from 'lucide-react'
+import { FileText, FolderPlus, ExternalLink, Terminal, Copy, Scissors, Clipboard, ClipboardPaste, FilePenLine, Trash2, Search, Image, Video } from 'lucide-react'
+import { getFileType } from '../../utils/fileType'
 
 const iconClass = 'w-3.5 h-3.5 text-[#cccccc]'
 const dangerIconClass = 'w-3.5 h-3.5 text-red-400'
@@ -30,29 +31,14 @@ export interface ContextMenuCallbacks {
   rootPath: string | null
 }
 
-const IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'bmp', 'ico'])
-const CODE_EXTS = new Set([
-  'js', 'jsx', 'ts', 'tsx', 'py', 'rb', 'rs', 'go', 'java', 'kt', 'scala',
-  'c', 'cpp', 'h', 'hpp', 'cs', 'fs', 'php', 'swift', 'dart',
-  'json', 'xml', 'yaml', 'yml', 'toml', 'ini', 'cfg', 'conf',
-  'css', 'scss', 'less', 'html', 'htm',
-  'md', 'mdx', 'rst',
-  'sql', 'sh', 'bash', 'zsh', 'bat', 'cmd', 'ps1',
-  'env', 'gitignore', 'lock', 'map',
-  'txt', 'log', 'csv', 'tsv',
-])
-
-function getExt(name: string): string {
-  return name.split('.').pop()?.toLowerCase() || ''
-}
-
 export function buildContextMenuItems(
   entry: FileEntry,
   entryParentPath: string,
   cb: ContextMenuCallbacks
 ): ContextMenuItem[] {
   const items: ContextMenuItem[] = []
-  const ext = entry.isDirectory ? '' : getExt(entry.name)
+  const ext = entry.isDirectory ? '' : (entry.name.split('.').pop()?.toLowerCase() || '')
+  const fileType = entry.isDirectory ? null : getFileType(entry.path)
   const parentPath = entry.isDirectory ? entry.path : entryParentPath
   const isDir = entry.isDirectory
 
@@ -70,12 +56,21 @@ export function buildContextMenuItems(
   })
 
   // Conditional top section (before main separator)
-  if (IMAGE_EXTS.has(ext)) {
+  if (fileType === 'image') {
     items.push({ label: '---' })
     items.push({
       label: 'Open in Images Preview',
       icon: icon(<Image className={iconClass} />),
       onClick: () => cb.onOpenImagePreview?.(entry.path),
+    })
+  }
+
+  if (fileType === 'video') {
+    items.push({ label: '---' })
+    items.push({
+      label: 'Open Video Preview',
+      icon: icon(<Video className={iconClass} />),
+      onClick: () => cb.onOpenPreview?.(entry.path),
     })
   }
 

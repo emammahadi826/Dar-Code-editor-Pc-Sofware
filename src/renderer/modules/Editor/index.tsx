@@ -5,6 +5,7 @@ import { FileCode, Loader } from 'lucide-react'
 import { useAppStore } from '../../store/appStore'
 import { useSettingsStore } from '../../store/settingsStore'
 import { useFileSystem } from '../../hooks/useFileSystem'
+import { MediaPreview } from '../../components/Preview/MediaPreview'
 
 loader.config({ monaco })
 
@@ -70,6 +71,25 @@ export function EditorModule() {
         <FileCode size={48} className="mb-4" />
         <span className="text-lg mb-1">Code Editor</span>
         <span className="text-sm">Open a folder or file to get started</span>
+      </div>
+    )
+  }
+
+  if (activeFile.fileType !== 'code') {
+    if (activeFile.mediaUrl) {
+      return (
+        <MediaPreview
+          fileType={activeFile.fileType}
+          mediaUrl={activeFile.mediaUrl}
+          fileName={activeFile.name}
+        />
+      )
+    }
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-editor-text opacity-40">
+        <FileCode size={48} className="mb-4" />
+        <span className="text-lg mb-1">Unable to load preview</span>
+        <span className="text-sm">The media file could not be read</span>
       </div>
     )
   }

@@ -48,6 +48,7 @@ export interface ElectronAPI {
 
   readDir: (dirPath: string) => Promise<FileEntry[]>
   readFile: (filePath: string) => Promise<string | null>
+  readFileBase64: (filePath: string) => Promise<string | null>
   writeFile: (filePath: string, content: string) => Promise<boolean>
   createFile: (filePath: string) => Promise<boolean>
   createDir: (dirPath: string) => Promise<boolean>

@@ -5,6 +5,23 @@ import { SearchInFiles } from '../modules/SearchInFiles'
 import { SettingsModule } from '../modules/Settings'
 import { FolderOpen, Plus, GitBranch, Puzzle } from 'lucide-react'
 import { useFileSystem } from '../hooks/useFileSystem'
+import { getFileType } from '../utils/fileType'
+
+const MIME_MAP: Record<string, string> = {
+  png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg',
+  gif: 'image/gif', svg: 'image/svg+xml', webp: 'image/webp',
+  bmp: 'image/bmp', ico: 'image/x-icon', avif: 'image/avif',
+  tiff: 'image/tiff', tif: 'image/tiff',
+  mp4: 'video/mp4', webm: 'video/webm', avi: 'video/x-msvideo',
+  mov: 'video/quicktime', mkv: 'video/x-matroska', wmv: 'video/x-ms-wmv',
+  flv: 'video/x-flv', m4v: 'video/mp4', mpg: 'video/mpeg',
+  mpeg: 'video/mpeg', '3gp': 'video/3gpp',
+}
+
+function getMimeType(fileName: string, fileType: 'image' | 'video'): string {
+  const ext = fileName.split('.').pop()?.toLowerCase() || ''
+  return MIME_MAP[ext] || `${fileType}/${ext}`
+}
 
 function PlaceholderView({ icon: Icon, title, description }: { icon: any; title: string; description: string }) {
   return (
@@ -34,6 +51,18 @@ export function SidePanel() {
   }, [setRootPath, addOutputLog])
 
   const handleFileSelect = async (filePath: string, fileName: string) => {
+    const fileType = getFileType(filePath)
+    if (fileType !== 'code') {
+      const base64 = window.electron ? await window.electron.readFileBase64(filePath) : null
+      if (base64) {
+        const mimeType = getMimeType(fileName, fileType)
+        const mediaUrl = `data:${mimeType};base64,${base64}`
+        openFile(filePath, fileName, '', '', fileType, mediaUrl)
+      } else {
+        addOutputLog(`[FS] Failed to read media file: ${fileName}`)
+      }
+      return
+    }
     const content = await readFile(filePath)
     if (content !== null) {
       openFile(filePath, fileName, content, '')
