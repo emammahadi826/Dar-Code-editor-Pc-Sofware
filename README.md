@@ -36,6 +36,8 @@ Dar Studio is a full-featured code editor for Windows, built from the ground up 
 - **Selection highlight** — Click to select files/folders with visual highlight
 - **Create in folder** — Header + buttons create inside the currently selected folder
 - **Tree connecting lines** — Indent guides with vertical lines and L-shaped connectors showing folder hierarchy (VS Code-style)
+- **Binary file detection** — Detects binary files (.exe, .apk, .dll, .wasm, .pyc, etc.) and shows a warning with "Open Anyway" button instead of garbled text
+- **Drag-and-drop moving** — Drag files/folders to move them within the tree with visual drop indicators
 - **Drag region** — Title bar is fully draggable
 
 ### Context Menu
@@ -80,7 +82,11 @@ Dar Studio is a full-featured code editor for Windows, built from the ground up 
 - **WebGL rendering** — GPU-accelerated rendering via `@xterm/addon-webgl` for smooth performance
 - **Named terminals** — Auto-named (PowerShell 1, 2, etc.) with custom rename support
 - **Unicode 11 support** — Full Unicode rendering via `@xterm/addon-unicode11`
-- **Search** — Terminal search with `@xterm/addon-search`
+- **Search** — Terminal search with `@xterm/addon-search` (Ctrl+Shift+F toggles search bar, Enter/Shift+Enter/F3 navigation, result counter)
+- **Copy/Paste** — Ctrl+V / Ctrl+Shift+V / Shift+Insert paste, Ctrl+Shift+C / Ctrl+C (copy if selected) copy, Ctrl+C pass-through for SIGINT
+- **Right-click context menu** — Copy, Paste, Clear with edge-aware positioning via `createPortal`
+- **Scrollback 5000** — Extended scrollback buffer
+- **Alt-click cursor move** — Click any position to move cursor
 - **Kill all** — Clean up all terminal processes on window close
 
 ### UI / Layout
@@ -223,13 +229,18 @@ dar-studio/
 |----------|--------|
 | `Ctrl+S` | Save current file |
 | `Ctrl+W` | Close current tab |
-| `Ctrl+Shift+F` | Open search panel |
+| `Ctrl+Shift+F` | Open search panel / terminal search |
 | `Ctrl+B` | Toggle sidebar |
 | `Ctrl+J` | Toggle bottom panel |
 | `Ctrl+\`` | New terminal / toggle terminal |
 | `Ctrl+=` / `Ctrl+-` | Zoom in / out |
 | `Ctrl+G` | Go to line |
 | `Ctrl+P` | Go to file (opens search) |
+| `Ctrl+V` / `Ctrl+Shift+V` / `Shift+Insert` | Terminal paste |
+| `Ctrl+Shift+C` | Terminal copy |
+| `Ctrl+C` | Terminal copy (if selected) / SIGINT |
+| `F3` | Terminal search next |
+| `Shift+F3` | Terminal search previous |
 
 <br>
 
@@ -260,6 +271,8 @@ A chronological list of bugs and issues resolved during development.
 | **Panel API mismatch (App.tsx)** | Fixed `react-resizable-panels` v4 breaking changes — `direction` → `orientation`, `ref` → `panelRef`, `onCollapse`/`onExpand` → `onResize`, `ImperativePanelHandle` → `PanelImperativeHandle`, `collapsedSize={5}` → `collapsedSize={0}` |
 | **Editor 0px height (MainArea.tsx)** | Changed `flex-1` → `h-full` because Panel inner div is `display: block`, so `flex-1` didn't fill the parent |
 | **ActivityBar restructure** | Moved outside horizontal `Group` to avoid non-Panel child warnings |
+| **Blank panel rendering** | Moved `useCallback` hooks before `if (loading)` early return to fix React Rules of Hooks violation |
+| **Blank space deselection** | Replaced `e.stopPropagation()` with `data-file-row` attribute + `closest()` detection — clicking empty space deselects while file row clicks remain functional |
 
 ### File System
 | Fix | Description |
@@ -270,6 +283,8 @@ A chronological list of bugs and issues resolved during development.
 | **Create in selected folder** | Header `+` buttons create inside the currently selected directory, fallback to `rootPath` |
 | **Tree connecting lines** | Added indent guides with absolute-positioned divs for vertical lines + L-shaped connectors — formula: `ancestorVerticalLines[i] = parent.ancestorVerticalLines[i] + [!parent.isLast]` |
 | **Dynamic context menu** | Replaced `@radix-ui/react-context-menu` with custom `createPortal`-based `ContextMenuPortal` — prevents clipping by file tree scrollbar, supports file-type-aware items |
+| **Binary file warning** | Added `BINARY_EXTENSIONS` set in `fileType.ts` — detected binary files open with warning screen (AlertTriangle icon + "Open Anyway" button) instead of garbled text |
+| **MenuBar Open File** | Updated File > Open File to detect binary/media files via `getFileType()` before reading |
 
 ### Search
 | Fix | Description |
@@ -294,6 +309,10 @@ A chronological list of bugs and issues resolved during development.
 | **WebGL rendering** | Installed `@xterm/addon-webgl` for GPU-accelerated terminal rendering |
 | **Named terminals** | Updated `shell-manager.ts` — each terminal has a `name` + `metadata` field, auto-named as "PowerShell 1, 2..." |
 | **Terminal tab switch bug** | `addInstance` always sets `activeTerminalId`, added check in `TerminalSplit` branch-1, added `React.key` prop for proper remount |
+| **Copy/paste keyboard shortcuts** | Single `attachCustomKeyEventHandler` — Ctrl+V / Shift+Insert / Ctrl+Shift+V paste, Ctrl+Shift+C copy, Ctrl+C (copy if selected, SIGINT if not), Shift+Insert paste |
+| **Right-click context menu** | createPortal-based menu (Copy/Paste/Clear) rendered to `document.body` — avoids clipping by terminal overflow hidden |
+| **Search Addon** | Loaded `@xterm/addon-search` — Ctrl+Shift+F toggles search bar, Enter/Shift+Enter/F3 navigation, result counter, Escape dismiss |
+| **Terminal options** | `scrollback: 5000`, `altClickMovesCursor: true` |
 | **eval warning** | `shell-manager.ts` uses `eval('require')('node-pty')` to bypass Rollup bundling of `.node` modules — noted as expected |
 
 ### Persistence
@@ -318,15 +337,25 @@ A chronological list of bugs and issues resolved during development.
 ### v1.1.0 (Current)
 *New features and improvements over v1.0.0:*
 
+**Binary File Detection**
+- Detects binary files (.exe, .apk, .dll, .wasm, .pyc, .docx, etc.) by extension
+- Shows warning screen with AlertTriangle icon + "Open Anyway" button (VS Code-style)
+- File > Open File dialog also handles binary/media files properly
+
 **Terminal Overhaul**
 - Multi-tab terminal management with create, switch, rename, and close
 - Horizontal/vertical split panes with draggable separators
 - WebGL GPU-accelerated rendering via `@xterm/addon-webgl`
 - Named ConPTY terminals (auto-named "PowerShell 1, 2...")
 - Unicode 11 support and terminal search
+- **Copy/paste keyboard shortcuts**: Ctrl+V / Ctrl+Shift+V / Shift+Insert paste, Ctrl+Shift+C / Ctrl+C (copy if selected) copy, Ctrl+C pass-through for SIGINT
+- **Right-click context menu**: Copy, Paste, Clear with edge-aware positioning via `createPortal`
+- **Search Addon**: Ctrl+Shift+F toggles search bar, Enter/Shift+Enter/F3 navigation, result counter
+- **Scrollback 5000** and **alt-click cursor move**
 
 **File Tree Enhancements**
 - Indent guides with connecting lines — vertical lines + L-shaped connectors showing folder hierarchy
+- Drag-and-drop file/folder moving with visual drop indicators
 
 **Dynamic Context Menu**
 - Replaced Radix context menu with custom `createPortal`-based menu (no scrollbar clipping)
@@ -336,6 +365,11 @@ A chronological list of bugs and issues resolved during development.
 - Open Preview, Open Image Preview, Open to the Side
 - Cut, Copy, Paste, Delete, Rename, Download
 - Edge-aware repositioning
+
+**Bug Fixes**
+- **Blank panel fix**: Moved `useCallback` hooks before `if (loading)` early return
+- **Blank space deselection**: Replaced `stopPropagation` with `data-file-row` + `closest()` detection
+- **Terminal tab switch**: `addInstance` always sets `activeTerminalId`, added React key for remount
 
 ### v1.0.0
 *Initial release of Dar Studio.*

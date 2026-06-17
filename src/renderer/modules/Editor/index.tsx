@@ -6,14 +6,15 @@ import { useAppStore } from '../../store/appStore'
 import { useSettingsStore } from '../../store/settingsStore'
 import { useFileSystem } from '../../hooks/useFileSystem'
 import { MediaPreview } from '../../components/Preview/MediaPreview'
+import { BinaryFileWarning } from '../../components/Editor/BinaryFileWarning'
 
 loader.config({ monaco })
 
 export function EditorModule() {
   const editorRef = useRef<any>(null)
-  const { openTabs, activeTab, updateTabContent, markTabClean, setCursor } = useAppStore()
+  const { openTabs, activeTab, updateTabContent, markTabClean, setCursor, closeTab, openFile } = useAppStore()
   const { fontSize, tabSize, wordWrap, minimap, lineNumbers } = useSettingsStore()
-  const { saveFile } = useFileSystem()
+  const { saveFile, readFile } = useFileSystem()
   const [mounted, setMounted] = useState(false)
 
   const activeFile = openTabs.find((t) => t.path === activeTab)
@@ -72,6 +73,21 @@ export function EditorModule() {
         <span className="text-lg mb-1">Code Editor</span>
         <span className="text-sm">Open a folder or file to get started</span>
       </div>
+    )
+  }
+
+  if (activeFile.fileType === 'binary') {
+    return (
+      <BinaryFileWarning
+        fileName={activeFile.name}
+        onOpenAnyway={async () => {
+          const content = await readFile(activeFile.path)
+          if (content !== null) {
+            closeTab(activeFile.path)
+            openFile(activeFile.path, activeFile.name, content, '', 'code')
+          }
+        }}
+      />
     )
   }
 

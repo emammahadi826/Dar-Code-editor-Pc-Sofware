@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { useAppStore } from '../store/appStore'
 import { useSettingsStore } from '../store/settingsStore'
+import { getFileType } from '../utils/fileType'
 
 interface MenuItemDef {
   label: string
@@ -73,10 +74,23 @@ export function MenuBar() {
             if (!window.electron) return
             const files = await window.electron.openFile()
             for (const filePath of files) {
-              const content = await window.electron.readFile(filePath)
-              if (content !== null) {
-                const name = filePath.split('\\').pop() || filePath.split('/').pop() || ''
-                useAppStore.getState().openFile(filePath, name, content, '')
+              const name = filePath.split('\\').pop() || filePath.split('/').pop() || ''
+              const fileType = getFileType(filePath)
+              if (fileType === 'binary') {
+                useAppStore.getState().openFile(filePath, name, '', '', 'binary')
+              } else if (fileType !== 'code') {
+                const base64 = await window.electron.readFileBase64(filePath)
+                if (base64) {
+                  const ext = name.split('.').pop()?.toLowerCase() || ''
+                  const mimeType = `${fileType}/${ext}`
+                  const mediaUrl = `data:${mimeType};base64,${base64}`
+                  useAppStore.getState().openFile(filePath, name, '', '', fileType, mediaUrl)
+                }
+              } else {
+                const content = await window.electron.readFile(filePath)
+                if (content !== null) {
+                  useAppStore.getState().openFile(filePath, name, content, '')
+                }
               }
             }
           },

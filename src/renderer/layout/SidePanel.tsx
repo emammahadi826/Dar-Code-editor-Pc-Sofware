@@ -52,6 +52,10 @@ export function SidePanel() {
 
   const handleFileSelect = async (filePath: string, fileName: string) => {
     const fileType = getFileType(filePath)
+    if (fileType === 'binary') {
+      openFile(filePath, fileName, '', '', 'binary')
+      return
+    }
     if (fileType !== 'code') {
       const base64 = window.electron ? await window.electron.readFileBase64(filePath) : null
       if (base64) {
