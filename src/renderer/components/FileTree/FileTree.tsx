@@ -300,6 +300,16 @@ export function FileTree({ rootPath, onFileSelect }: FileTreeProps) {
     ? (rootPath.split('\\').pop() || rootPath.split('/').pop() || 'root')
     : (createParent.split('\\').pop() || createParent.split('/').pop() || 'folder')
 
+  const handleContainerClick = useCallback((e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      setSelectedPath(null)
+    }
+  }, [])
+
+  const handleRootClick = useCallback(() => {
+    setSelectedPath(null)
+  }, [])
+
   if (loading) {
     return <div className="text-sidepanel-text text-sm p-3 opacity-60">Loading...</div>
   }
@@ -307,11 +317,15 @@ export function FileTree({ rootPath, onFileSelect }: FileTreeProps) {
   return (
     <div
       className="text-sm"
+      onClick={handleContainerClick}
       onDragOver={(e) => { if (draggedPath) e.preventDefault() }}
       onDrop={handleRootDrop}
       onDragEnd={handleDragEnd}
     >
-      <div className="flex items-center justify-between px-3 py-1.5 mb-1">
+      <div
+        className="flex items-center justify-between px-3 py-1.5 mb-1 cursor-pointer"
+        onClick={handleRootClick}
+      >
         <span className="text-sidepanel-header text-sm font-semibold uppercase tracking-wider truncate">
           {rootPath.split('\\').pop() || rootPath.split('/').pop()}
         </span>
