@@ -335,12 +335,25 @@ A chronological list of bugs and issues resolved during development.
 ## Changelog
 
 ### v1.1.1 (Current)
-*New features and improvements over v1.0.0:*
+*New features and improvements over v1.1.0:*
 
 **Binary File Detection**
 - Detects binary files (.exe, .apk, .dll, .wasm, .pyc, .docx, etc.) by extension
 - Shows warning screen with AlertTriangle icon + "Open Anyway" button (VS Code-style)
 - File > Open File dialog also handles binary/media files properly
+
+**Terminal Enhancements**
+- **Copy/paste keyboard shortcuts**: Ctrl+V / Ctrl+Shift+V / Shift+Insert paste, Ctrl+Shift+C / Ctrl+C (copy if selected) copy, Ctrl+C pass-through for SIGINT
+- **Right-click context menu**: Copy, Paste, Clear with edge-aware positioning via `createPortal`
+- **Search Addon**: Ctrl+Shift+F toggles search bar, Enter/Shift+Enter/F3 navigation, result counter
+- **Scrollback 5000** and **alt-click cursor move**
+
+**Bug Fixes**
+- **Blank panel fix**: Moved `useCallback` hooks before `if (loading)` early return to fix React Rules of Hooks violation
+- **Blank space deselection**: Replaced `stopPropagation` with `data-file-row` + `closest()` detection — clicking empty space deselects while file row clicks remain functional
+
+### v1.1.0
+*New features and improvements over v1.0.0:*
 
 **Terminal Overhaul**
 - Multi-tab terminal management with create, switch, rename, and close
@@ -348,10 +361,7 @@ A chronological list of bugs and issues resolved during development.
 - WebGL GPU-accelerated rendering via `@xterm/addon-webgl`
 - Named ConPTY terminals (auto-named "PowerShell 1, 2...")
 - Unicode 11 support and terminal search
-- **Copy/paste keyboard shortcuts**: Ctrl+V / Ctrl+Shift+V / Shift+Insert paste, Ctrl+Shift+C / Ctrl+C (copy if selected) copy, Ctrl+C pass-through for SIGINT
-- **Right-click context menu**: Copy, Paste, Clear with edge-aware positioning via `createPortal`
-- **Search Addon**: Ctrl+Shift+F toggles search bar, Enter/Shift+Enter/F3 navigation, result counter
-- **Scrollback 5000** and **alt-click cursor move**
+- **Tab switch fix**: `addInstance` always sets `activeTerminalId`, added React key for proper remount
 
 **File Tree Enhancements**
 - Indent guides with connecting lines — vertical lines + L-shaped connectors showing folder hierarchy
@@ -365,11 +375,6 @@ A chronological list of bugs and issues resolved during development.
 - Open Preview, Open Image Preview, Open to the Side
 - Cut, Copy, Paste, Delete, Rename, Download
 - Edge-aware repositioning
-
-**Bug Fixes**
-- **Blank panel fix**: Moved `useCallback` hooks before `if (loading)` early return
-- **Blank space deselection**: Replaced `stopPropagation` with `data-file-row` + `closest()` detection
-- **Terminal tab switch**: `addInstance` always sets `activeTerminalId`, added React key for remount
 
 ### v1.0.0
 *Initial release of Dar Studio.*
