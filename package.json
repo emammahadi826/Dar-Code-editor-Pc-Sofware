@@ -1,6 +1,6 @@
 {
   "name": "dar-studio",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Dar Studio — A modern code editor built with Electron, React, and Monaco Editor",
   "main": "out/main/index.js",
   "scripts": {

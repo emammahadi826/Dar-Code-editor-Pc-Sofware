@@ -334,7 +334,7 @@ A chronological list of bugs and issues resolved during development.
 
 ## Changelog
 
-### v1.1.0 (Current)
+### v1.1.1 (Current)
 *New features and improvements over v1.0.0:*
 
 **Binary File Detection**
