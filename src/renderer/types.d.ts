@@ -18,12 +18,26 @@ export interface ShellInfo {
   icon: string
 }
 
+export interface TerminalInstanceInfo {
+  id: number
+  name: string
+  shellName: string
+  shellPath: string
+  cwd: string
+  createdAt: number
+}
+
 export interface TerminalAPI {
-  create: (shell: string) => Promise<number>
+  create: (shell: string) => Promise<TerminalInstanceInfo | null>
+  createNamed: (shell: string, name?: string, cwd?: string) => Promise<TerminalInstanceInfo | null>
   write: (id: number, data: string) => void
   resize: (id: number, cols: number, rows: number) => void
   kill: (id: number) => void
+  killAll: () => void
+  rename: (id: number, name: string) => void
+  list: () => Promise<TerminalInstanceInfo[]>
   onData: (callback: (id: number, data: string) => void) => () => void
+  onShellExit: (callback: (id: number, code: number) => void) => () => void
   getShells: () => Promise<ShellInfo[]>
 }
 

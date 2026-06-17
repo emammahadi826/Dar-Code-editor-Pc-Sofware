@@ -32,13 +32,22 @@ contextBridge.exposeInMainWorld('electron', {
   // Terminal
   terminal: {
     create: (shell: string) => ipcRenderer.invoke('terminal:create', shell),
+    createNamed: (shell: string, name?: string, cwd?: string) => ipcRenderer.invoke('terminal:createNamed', shell, name, cwd),
     write: (id: number, data: string) => ipcRenderer.send('terminal:write', id, data),
     resize: (id: number, cols: number, rows: number) => ipcRenderer.send('terminal:resize', id, cols, rows),
     kill: (id: number) => ipcRenderer.send('terminal:kill', id),
+    killAll: () => ipcRenderer.send('terminal:killAll'),
+    rename: (id: number, name: string) => ipcRenderer.send('terminal:rename', id, name),
+    list: () => ipcRenderer.invoke('terminal:list'),
     onData: (callback: (id: number, data: string) => void) => {
       const handler = (_: any, id: number, data: string) => callback(id, data)
       ipcRenderer.on('terminal:data', handler)
       return () => ipcRenderer.removeListener('terminal:data', handler)
+    },
+    onShellExit: (callback: (id: number, code: number) => void) => {
+      const handler = (_: any, id: number, code: number) => callback(id, code)
+      ipcRenderer.on('terminal:exited', handler)
+      return () => ipcRenderer.removeListener('terminal:exited', handler)
     },
     getShells: () => ipcRenderer.invoke('terminal:getShells'),
   },
