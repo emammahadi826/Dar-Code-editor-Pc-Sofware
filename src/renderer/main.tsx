@@ -67,7 +67,7 @@ if (canvas && ctx) {
     if (frameSkip % 3 !== 0) return
 
     if (video.videoWidth && video.videoHeight) {
-      const maxW = Math.min(window.innerWidth * 0.65, 800)
+      const maxW = Math.min(window.innerWidth * 0.4, 450)
       const scale = maxW / video.videoWidth
       const w = Math.round(maxW)
       const h = Math.round(video.videoHeight * scale)
