@@ -135,7 +135,7 @@ export function SettingsModule() {
       <div className="mt-8 pt-5 border-t border-sidepanel-border">
         <h3 className="text-sm font-semibold text-sidepanel-header uppercase tracking-wider mb-3">About</h3>
         <div className="text-sm text-sidepanel-text opacity-60 space-y-1.5">
-          <p>Dar Studio v1.0.0</p>
+          <p>Dar Studio v1.1.1</p>
           <p>Electron + React + Monaco Editor</p>
           <p>Windows Desktop Code Editor</p>
         </div>

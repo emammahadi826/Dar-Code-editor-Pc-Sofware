@@ -9,7 +9,7 @@ win:
   icon: Icon/icon.ico
 
 nsis:
-  artifactName: DarStudio-Setup-${version}
+  artifactName: DarStudio-Setup-${version}.exe
   oneClick: false
   perMachine: false
   allowToChangeInstallationDirectory: true
@@ -23,7 +23,7 @@ nsis:
   installerSidebar: resources/installer-sidebar.bmp
 
 portable:
-  artifactName: DarStudio-Portable-${version}
+  artifactName: DarStudio-Portable-${version}.exe
 
 directories:
   output: dist-electron

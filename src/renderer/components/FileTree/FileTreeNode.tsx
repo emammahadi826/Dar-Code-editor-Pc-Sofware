@@ -34,7 +34,7 @@ interface FileTreeNodeProps {
   onDragEnd: () => void
   onDragOver: (entry: FileEntry, position: 'before' | 'after' | 'inside') => void
   onDragLeave: () => void
-  onDrop: (entry: FileEntry, position: 'before' | 'after' | 'inside') => void
+  onDrop: (entry: FileEntry, position: 'before' | 'after' | 'inside', e: React.DragEvent) => void
 }
 
 const extIconMap: Record<string, string> = {
@@ -206,7 +206,7 @@ export function FileTreeNode({
       position = 'after'
     }
 
-    onDrop(entry, position)
+    onDrop(entry, position, e)
   }, [draggedPath, entry, onDrop])
 
   const isSelected = entry.path === selectedPath

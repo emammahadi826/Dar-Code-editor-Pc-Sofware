@@ -22,7 +22,7 @@ export function StatusBar() {
       {rootPath && (
         <span className="opacity-60 truncate max-w-56">{rootPath}</span>
       )}
-      <span className="opacity-60">Dar Studio v1.0.0</span>
+      <span className="opacity-60">Dar Studio v1.1.1</span>
     </div>
   )
 }

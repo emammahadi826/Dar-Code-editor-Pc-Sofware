@@ -38,6 +38,7 @@ Dar Studio is a full-featured code editor for Windows, built from the ground up 
 - **Tree connecting lines** — Indent guides with vertical lines and L-shaped connectors showing folder hierarchy (VS Code-style)
 - **Binary file detection** — Detects binary files (.exe, .apk, .dll, .wasm, .pyc, etc.) and shows a warning with "Open Anyway" button instead of garbled text
 - **Drag-and-drop moving** — Drag files/folders to move them within the tree with visual drop indicators
+- **External drag-and-drop** — Drag files/folders from Windows File Explorer (or any OS app) into the file tree to move them into the workspace; "Drop here" overlay with visual feedback
 - **Drag region** — Title bar is fully draggable
 
 ### Context Menu
@@ -88,6 +89,13 @@ Dar Studio is a full-featured code editor for Windows, built from the ground up 
 - **Scrollback 5000** — Extended scrollback buffer
 - **Alt-click cursor move** — Click any position to move cursor
 - **Kill all** — Clean up all terminal processes on window close
+
+### Splash Screen
+- **Video splash** — Animated splash screen with custom video (8.33s, 1080×1080) that plays on startup
+- **Chroma key removal** — Canvas 2D pixel-level green-screen removal (`g > r+30 && g > b+30 → alpha=0`) for transparent overlay effect
+- **Frame skip optimization** — Renders every 3rd frame (~20fps) for ~66% CPU reduction
+- **Auto-dismiss** — Splash hides immediately when video ends (`ended` event), with fallback timeout
+- **Watermark concealment** — Green rectangle overlay hides source watermark during chroma key processing
 
 ### UI / Layout
 - **Resizable panels** — Sidebar, editor, and bottom panel are all resizable with draggable separators
@@ -219,6 +227,7 @@ dar-studio/
 | `terminal:*` | Both directions | Terminal create/write/resize/kill/data/list/rename/killAll |
 | `shell:revealInExplorer` | Renderer → Main | Open file/folder in Windows File Explorer |
 | `app:copyToClipboard` | Renderer → Main | Copy text to system clipboard |
+| `fs:moveFile` | Renderer → Main | Move file/folder across drives (copy + delete) |
 | `app:getLastPath` / `app:setLastPath` | Renderer → Main | Persist last opened folder path |
 
 <br>
@@ -336,6 +345,21 @@ A chronological list of bugs and issues resolved during development.
 
 ### v1.1.1 (Current)
 *New features and improvements over v1.1.0:*
+
+**Splash Screen**
+- **Video splash**: Custom 8.33s 1080×1080 video plays on startup with Canvas 2D rendering
+- **Chroma key removal**: Pixel-level green-screen removal (`g > r+30 && g > b+30 → alpha=0`) for transparent overlay
+- **Frame skip optimization**: Renders every 3rd frame (~20fps) for ~66% CPU reduction
+- **Auto-dismiss**: Hides immediately on `ended` event with fallback `duration + 3000ms` timeout
+- **Watermark concealment**: Green rectangle overlay hides source watermark during processing
+
+**External Drag-and-Drop**
+- Drag files/folders from Windows File Explorer into file tree to move them into the workspace
+- Cross-drive support via `copyFileSync + unlinkSync` fallback
+- "Drop here" visual overlay with opacity transition
+
+**Menu Bar**
+- **Refresh button**: Added in Help section — reloads the entire renderer process
 
 **Binary File Detection**
 - Detects binary files (.exe, .apk, .dll, .wasm, .pyc, .docx, etc.) by extension

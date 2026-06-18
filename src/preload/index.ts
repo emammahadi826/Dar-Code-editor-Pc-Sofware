@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld('electron', {
   createDir: (dirPath: string) => ipcRenderer.invoke('fs:createDir', dirPath),
   delete: (targetPath: string) => ipcRenderer.invoke('fs:delete', targetPath),
   rename: (oldPath: string, newPath: string) => ipcRenderer.invoke('fs:rename', oldPath, newPath),
+  moveFile: (sourcePath: string, destPath: string) => ipcRenderer.invoke('fs:moveFile', sourcePath, destPath),
   exists: (targetPath: string) => ipcRenderer.invoke('fs:exists', targetPath),
 
   // Dialogs

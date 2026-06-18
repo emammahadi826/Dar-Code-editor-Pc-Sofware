@@ -37,14 +37,78 @@ if (msgEl) {
   }, 800)
 }
 
+// Splash video chroma key + watermark
+let splashTimer: number | undefined
+let animFrameId: number | null = null
+
+function hideSplash() {
+  if (dotsEl) dotsEl.textContent = ''
+  splash?.classList.add('fade-out')
+  if (animFrameId != null) cancelAnimationFrame(animFrameId)
+  setTimeout(() => splash?.classList.add('hidden'), 300)
+}
+
+const canvas = document.getElementById('splash-canvas') as HTMLCanvasElement
+const ctx = canvas?.getContext('2d')
+
+if (canvas && ctx) {
+  const video = document.createElement('video')
+  video.src = '/video.mp4?t=' + Date.now()
+  video.loop = false
+  video.muted = true
+  video.playsInline = true
+
+  let frameSkip = 0
+
+  function processFrame() {
+    animFrameId = requestAnimationFrame(processFrame)
+    if (video.paused || video.ended) return
+    frameSkip++
+    if (frameSkip % 3 !== 0) return
+
+    if (video.videoWidth && video.videoHeight) {
+      const maxW = Math.min(window.innerWidth * 0.65, 800)
+      const scale = maxW / video.videoWidth
+      const w = Math.round(maxW)
+      const h = Math.round(video.videoHeight * scale)
+      if (canvas.width !== w || canvas.height !== h) {
+        canvas.width = w
+        canvas.height = h
+      }
+
+      ctx.drawImage(video, 0, 0, w, h)
+
+      ctx.fillStyle = '#00ff00'
+      const wmW = Math.round(w * 0.28)
+      const wmH = Math.round(h * 0.09)
+      ctx.fillRect(w - wmW, h - wmH, wmW, wmH)
+
+      const imageData = ctx.getImageData(0, 0, w, h)
+      const data = imageData.data
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i], g = data[i + 1], b = data[i + 2]
+        if (g > r + 30 && g > b + 30) {
+          data[i + 3] = 0
+        }
+      }
+      ctx.putImageData(imageData, 0, 0)
+    }
+  }
+
+  video.addEventListener('loadedmetadata', () => {
+    if (splashTimer != null) clearTimeout(splashTimer)
+    splashTimer = window.setTimeout(hideSplash, video.duration * 1000 + 3000)
+  })
+
+  video.addEventListener('ended', hideSplash)
+  video.addEventListener('play', processFrame)
+  video.play().catch(() => {})
+}
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <App />
   </React.StrictMode>
 )
 
-setTimeout(() => {
-  if (dotsEl) dotsEl.textContent = ''
-  splash?.classList.add('fade-out')
-  setTimeout(() => splash?.classList.add('hidden'), 300)
-}, 2500)
+splashTimer = window.setTimeout(hideSplash, 2500)

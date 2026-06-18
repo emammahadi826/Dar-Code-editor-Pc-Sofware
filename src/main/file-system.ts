@@ -79,6 +79,18 @@ export function registerFileSystem() {
     }
   })
 
+  ipcMain.handle('fs:moveFile', async (_, sourcePath: string, destPath: string) => {
+    try {
+      const dir = path.dirname(destPath)
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
+      fs.copyFileSync(sourcePath, destPath)
+      fs.unlinkSync(sourcePath)
+      return true
+    } catch {
+      return false
+    }
+  })
+
   ipcMain.handle('fs:exists', async (_, targetPath: string) => {
     return fs.existsSync(targetPath)
   })

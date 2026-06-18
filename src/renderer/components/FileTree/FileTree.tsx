@@ -30,6 +30,7 @@ export function FileTree({ rootPath, onFileSelect }: FileTreeProps) {
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; entry: FileEntry } | null>(null)
   const [draggedPath, setDraggedPath] = useState<string | null>(null)
   const [dropState, setDropState] = useState<DropState | null>(null)
+  const [externalDropOver, setExternalDropOver] = useState(false)
 
   const loadEntries = useCallback(async (dirPath: string) => {
     if (!window.electron) return
@@ -145,7 +146,26 @@ export function FileTree({ rootPath, onFileSelect }: FileTreeProps) {
     setDropState(null)
   }, [])
 
-  const handleDrop = useCallback(async (targetEntry: FileEntry, position: 'before' | 'after' | 'inside') => {
+  const handleDrop = useCallback(async (targetEntry: FileEntry, position: 'before' | 'after' | 'inside', e: React.DragEvent) => {
+    if (e.dataTransfer.files.length > 0) {
+      // External drop
+      e.preventDefault()
+      const newParent = position === 'inside' && targetEntry.isDirectory
+        ? targetEntry.path
+        : getEntryParentPath(targetEntry.path)
+      for (const file of Array.from(e.dataTransfer.files)) {
+        const srcPath = (file as any).path
+        const destPath = newParent + '\\' + file.name
+        if (srcPath && srcPath !== destPath) {
+          await window.electron?.moveFile(srcPath, destPath)
+          addOutputLog(`[FS] Moved: ${file.name} → ${newParent.split('\\').pop()}`)
+        }
+      }
+      setDropState(null)
+      setRefreshKey((k) => k + 1)
+      return
+    }
+
     if (!draggedPath) return
 
     const draggedName = draggedPath.split('\\').pop() || draggedPath.split('/').pop() || ''
@@ -200,6 +220,21 @@ export function FileTree({ rootPath, onFileSelect }: FileTreeProps) {
 
   const handleRootDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault()
+    setExternalDropOver(false)
+
+    if (e.dataTransfer.files.length > 0) {
+      for (const file of Array.from(e.dataTransfer.files)) {
+        const srcPath = (file as any).path
+        const destPath = rootPath + '\\' + file.name
+        if (srcPath && srcPath !== destPath) {
+          await window.electron?.moveFile(srcPath, destPath)
+          addOutputLog(`[FS] Moved: ${file.name} → root`)
+        }
+      }
+      setRefreshKey((k) => k + 1)
+      return
+    }
+
     if (!draggedPath) return
 
     const draggedName = draggedPath.split('\\').pop() || draggedPath.split('/').pop() || ''
@@ -312,12 +347,27 @@ export function FileTree({ rootPath, onFileSelect }: FileTreeProps) {
   }
 
   return (
-    <div
-      className="text-sm h-full flex flex-col overflow-y-auto"
-      onDragOver={(e) => { if (draggedPath) e.preventDefault() }}
-      onDrop={handleRootDrop}
-      onDragEnd={handleDragEnd}
-    >
+      <div
+        className={`text-sm h-full flex flex-col overflow-y-auto ${externalDropOver ? 'bg-accent-blue/5' : ''}`}
+        onDragOver={(e) => {
+          e.preventDefault()
+          if (!draggedPath && e.dataTransfer.types.includes('Files')) {
+            setExternalDropOver(true)
+          }
+        }}
+        onDragEnter={(e) => {
+          if (!draggedPath && e.dataTransfer.types.includes('Files')) {
+            setExternalDropOver(true)
+          }
+        }}
+        onDragLeave={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+            setExternalDropOver(false)
+          }
+        }}
+        onDrop={handleRootDrop}
+        onDragEnd={handleDragEnd}
+      >
       <div className="flex items-center justify-between px-3 py-1.5 mb-1">
         <span className="text-sidepanel-header text-sm font-semibold uppercase tracking-wider truncate">
           {rootPath.split('\\').pop() || rootPath.split('/').pop()}
@@ -352,6 +402,12 @@ export function FileTree({ rootPath, onFileSelect }: FileTreeProps) {
           Creating in: {createParentName}
         </span>
       </div>
+
+      {externalDropOver && (
+        <div className="px-3 py-8 text-center text-sidepanel-text opacity-60 border-2 border-dashed border-accent-blue/40 rounded mx-3 mb-2">
+          Drop files here to move to workspace
+        </div>
+      )}
 
       {creating && creating.parentPath === rootPath && (
         <div className="relative flex items-center gap-1.5 py-[3px]" style={{ paddingLeft: '8px' }}>

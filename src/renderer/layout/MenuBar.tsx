@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
+import { RotateCw } from 'lucide-react'
 import { useAppStore } from '../store/appStore'
 import { useSettingsStore } from '../store/settingsStore'
 import { getFileType } from '../utils/fileType'
@@ -281,7 +282,7 @@ export function MenuBar() {
         {
           label: 'About Dar Studio',
           action: () => {
-            alert('Dar Studio v1.0.0\nA modern code editor built with Electron + React + Monaco\n\nMade by Mahadi')
+            alert('Dar Studio v1.1.1\nA modern code editor built with Electron + React + Monaco\n\nMade by Mahadi')
           },
         },
         {
@@ -342,6 +343,15 @@ export function MenuBar() {
           )}
         </div>
       ))}
+      <div className="h-full flex items-center px-1">
+        <button
+          onClick={() => window.location.reload()}
+          title="Refresh Editor"
+          className="h-full px-2 text-titlebar-text hover:text-white hover:bg-hover transition-colors"
+        >
+          <RotateCw size={14} />
+        </button>
+      </div>
     </div>
   )
 }
