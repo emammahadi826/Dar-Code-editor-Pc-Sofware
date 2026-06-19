@@ -87,7 +87,7 @@ if (canvas && ctx) {
       const data = imageData.data
       for (let i = 0; i < data.length; i += 4) {
         const r = data[i], g = data[i + 1], b = data[i + 2]
-        if (g > r + 30 && g > b + 30) {
+        if (g > r + 20 && g > b + 20 && r < 120 && b < 120) {
           data[i + 3] = 0
         }
       }
@@ -101,7 +101,10 @@ if (canvas && ctx) {
   })
 
   video.addEventListener('ended', hideSplash)
-  video.addEventListener('play', processFrame)
+  video.addEventListener('play', () => {
+    canvas.classList.add('visible')
+    processFrame()
+  })
   video.play().catch(() => {})
 }
 
