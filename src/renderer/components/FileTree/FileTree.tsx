@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react'
+import React, { useState, useCallback, useEffect, useRef } from 'react'
 import { FileTreeNode } from './FileTreeNode'
 import { FileEntry } from '../../types'
 import { useAppStore } from '../../store/appStore'
@@ -26,6 +26,10 @@ export function FileTree({ rootPath, onFileSelect }: FileTreeProps) {
   const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set())
   const [renaming, setRenaming] = useState<{ path: string; name: string } | null>(null)
   const [creating, setCreating] = useState<{ parentPath: string; type: 'file' | 'folder' } | null>(null)
+  const [clipboard, setClipboard] = useState<{
+    paths: string[]
+    action: 'copy' | 'cut'
+  } | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
   const [selectedPath, setSelectedPath] = useState<string | null>(null)
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; entry: FileEntry } | null>(null)
@@ -309,6 +313,180 @@ export function FileTree({ rootPath, onFileSelect }: FileTreeProps) {
     setPendingDropInfo(null)
   }, [])
 
+  const getClipboardIndicator = useCallback(() => {
+    if (!clipboard) return null
+    const label = clipboard.action === 'copy' ? 'copied' : 'cut'
+    return `${clipboard.paths.length} item${clipboard.paths.length > 1 ? 's' : ''} ${label}`
+  }, [clipboard])
+
+  const handleCopy = useCallback(() => {
+    if (!selectedPath) return
+    setClipboard({ paths: [selectedPath], action: 'copy' })
+    const name = selectedPath.split('\\').pop()
+    addOutputLog(`[Clipboard] Copied: ${name}`)
+  }, [selectedPath, addOutputLog])
+
+  const handleCut = useCallback(() => {
+    if (!selectedPath) return
+    setClipboard({ paths: [selectedPath], action: 'cut' })
+    const name = selectedPath.split('\\').pop()
+    addOutputLog(`[Clipboard] Cut: ${name}`)
+  }, [selectedPath, addOutputLog])
+
+  const getUniquePath = useCallback(async (basePath: string): Promise<string> => {
+    const exists = await window.electron?.exists(basePath)
+    if (!exists) return basePath
+    const dir = basePath.substring(0, basePath.lastIndexOf('\\'))
+    const name = basePath.split('\\').pop() || ''
+    const dotIdx = name.lastIndexOf('.')
+    if (dotIdx > 0) {
+      const stem = name.substring(0, dotIdx)
+      const ext = name.substring(dotIdx)
+      let counter = 1
+      while (true) {
+        const candidate = `${dir}\\${stem} - Copy${counter > 1 ? ` (${counter})` : ''}${ext}`
+        const candidateExists = await window.electron?.exists(candidate)
+        if (!candidateExists) return candidate
+        counter++
+      }
+    } else {
+      let counter = 1
+      while (true) {
+        const candidate = `${dir}\\${name} - Copy${counter > 1 ? ` (${counter})` : ''}`
+        const candidateExists = await window.electron?.exists(candidate)
+        if (!candidateExists) return candidate
+        counter++
+      }
+    }
+  }, [])
+
+  const handlePaste = useCallback(async () => {
+    if (!clipboard || clipboard.paths.length === 0) return
+    const targetDir = selectedPath && entries.find(e => e.path === selectedPath)?.isDirectory
+      ? selectedPath
+      : selectedPath
+        ? selectedPath.substring(0, selectedPath.lastIndexOf('\\'))
+        : rootPath
+    const destName = targetDir.split('\\').pop() || 'root'
+    let successCount = 0
+    for (const srcPath of clipboard.paths) {
+      const name = srcPath.split('\\').pop() || ''
+      const destPath = targetDir + '\\' + name
+      const finalPath = await getUniquePath(destPath)
+      if (clipboard.action === 'copy') {
+        const ok = await window.electron?.copyFile(srcPath, finalPath)
+        if (ok) {
+          addOutputLog(`[FS] Copied: ${name} → ${destName}`)
+          successCount++
+        }
+      } else {
+        if (destPath === srcPath) {
+          addOutputLog(`[FS] Cannot paste in the same location`)
+          continue
+        }
+        const ok = await window.electron?.moveFile(srcPath, finalPath)
+        if (ok) {
+          addOutputLog(`[FS] Moved: ${name} → ${destName}`)
+          successCount++
+          const openTabs = useAppStore.getState().openTabs
+          const tabToUpdate = openTabs.find(t => t.path === srcPath)
+          if (tabToUpdate) {
+            useAppStore.getState().closeTab(srcPath)
+          }
+        }
+      }
+    }
+    if (clipboard.action === 'cut') setClipboard(null)
+    if (successCount > 0) setRefreshKey((k) => k + 1)
+  }, [clipboard, selectedPath, entries, rootPath, addOutputLog, getUniquePath])
+
+  const handleClearClipboard = useCallback(() => {
+    setClipboard(null)
+  }, [])
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    const target = e.target as HTMLElement
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return
+
+    const isCtrl = e.ctrlKey || e.metaKey
+    const isShift = e.shiftKey
+
+    if (isCtrl && isShift && e.key === 'N') {
+      e.preventDefault()
+      const parent = selectedPath && entries.find(ent => ent.path === selectedPath)?.isDirectory
+        ? selectedPath
+        : rootPath
+      handleCreateFile(parent)
+      return
+    }
+
+    if (isCtrl && isShift && e.key === 'F') {
+      e.preventDefault()
+      // Ctrl+Shift+F is already globally handled for search
+      return
+    }
+
+    if (isCtrl && e.key === 'c') {
+      e.preventDefault()
+      handleCopy()
+      return
+    }
+
+    if (isCtrl && e.key === 'x') {
+      e.preventDefault()
+      handleCut()
+      return
+    }
+
+    if (isCtrl && e.key === 'v') {
+      e.preventDefault()
+      handlePaste()
+      return
+    }
+
+    if (isCtrl && e.key === 'a') {
+      e.preventDefault()
+      if (entries.length > 0) {
+        setSelectedPath(entries[0].path)
+      }
+      return
+    }
+
+    if (e.key === 'Delete' || e.key === 'Del') {
+      if (selectedPath) {
+        e.preventDefault()
+        handleDelete(selectedPath)
+      }
+      return
+    }
+
+    if (e.key === 'F2') {
+      if (selectedPath) {
+        e.preventDefault()
+        const entry = entries.find(ent => ent.path === selectedPath)
+        if (entry) handleRename(entry.path, entry.name)
+      }
+      return
+    }
+
+    if (e.key === 'Enter') {
+      if (selectedPath) {
+        e.preventDefault()
+        const entry = entries.find(ent => ent.path === selectedPath)
+        if (entry && !entry.isDirectory) {
+          const name = entry.path.split('\\').pop() || entry.path.split('/').pop() || ''
+          onFileSelect(entry.path, name)
+        }
+      }
+      return
+    }
+  }, [selectedPath, entries, rootPath, handleCopy, handleCut, handlePaste, handleDelete, handleRename, handleCreateFile, onFileSelect])
+
+  const treeRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    treeRef.current?.focus()
+  }, [rootPath])
+
   const getEntryParentPath = useCallback((entry: FileEntry): string => {
     return entry.path.substring(0, entry.path.lastIndexOf('\\'))
   }, [])
@@ -403,7 +581,10 @@ export function FileTree({ rootPath, onFileSelect }: FileTreeProps) {
 
   return (
       <div
-        className={`text-sm h-full flex flex-col overflow-y-auto ${externalDropOver ? 'bg-accent-blue/5' : ''}`}
+        ref={treeRef}
+        tabIndex={0}
+        className={`text-sm h-full flex flex-col overflow-y-auto outline-none ${externalDropOver ? 'bg-accent-blue/5' : ''}`}
+        onKeyDown={handleKeyDown}
         onDragOver={(e) => {
           e.preventDefault()
           if (!draggedPath && e.dataTransfer.types.includes('Files')) {
@@ -542,6 +723,18 @@ export function FileTree({ rootPath, onFileSelect }: FileTreeProps) {
       )}
 
       <div className="flex-1 min-h-[2px]" onClick={handleContainerClick} />
+
+      {clipboard && (
+        <div className="flex items-center gap-2 px-3 py-2 border-t border-[#2d2d2d] bg-[#1a1a1a] shrink-0">
+          <span className="text-xs text-[#9d9d9d]">📋 {getClipboardIndicator()}</span>
+          <button
+            onClick={handleClearClipboard}
+            className="ml-auto text-xs text-[#666] hover:text-[#ccc] transition-colors"
+          >
+            Clear
+          </button>
+        </div>
+      )}
 
       <ContextMenuPortal
         visible={!!ctxMenu}
