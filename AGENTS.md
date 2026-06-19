@@ -1,6 +1,6 @@
 # AGENTS.md — Dar Studio
 
-Code editor at `Code-Editor/dar-studio/` (Electron 28 + electron-vite 2 + React 18 + Tailwind 3 + Monaco 0.55 + Zustand).
+**Independent repo** — `Code-Editor/dar-studio/` has its own `.git` (remote: `Dar-Code-editor-Pc-Sofware.git`). Do NOT push from the parent `Tools/` repo. Use `git push` from inside `Code-Editor/dar-studio/` only.
 
 ## Commands
 ```
