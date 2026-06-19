@@ -67,6 +67,10 @@ export interface ElectronAPI {
 
   searchInFiles: (p: { rootPath: string; query: string; caseSensitive?: boolean; maxResults?: number }) => Promise<SearchResult[]>
 
+  watchDir: (dirPath: string) => Promise<boolean>
+  unwatchDir: () => Promise<boolean>
+  onFilesChanged: (callback: () => void) => () => void
+
   revealInExplorer: (targetPath: string) => Promise<void>
   copyToClipboard: (text: string) => Promise<void>
 

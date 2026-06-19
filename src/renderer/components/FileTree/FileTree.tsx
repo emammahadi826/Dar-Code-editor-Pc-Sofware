@@ -50,6 +50,18 @@ export function FileTree({ rootPath, onFileSelect }: FileTreeProps) {
     loadEntries(rootPath)
   }, [rootPath, refreshKey, loadEntries])
 
+  useEffect(() => {
+    if (!window.electron?.watchDir) return
+    window.electron.watchDir(rootPath)
+    const unsub = window.electron.onFilesChanged(() => {
+      setRefreshKey((k) => k + 1)
+    })
+    return () => {
+      unsub()
+      window.electron?.unwatchDir()
+    }
+  }, [rootPath])
+
   const handleToggle = useCallback(async (dirPath: string, isExpanded: boolean) => {
     const next = new Set(expandedDirs)
     if (isExpanded) next.delete(dirPath)
@@ -539,9 +551,10 @@ export function FileTree({ rootPath, onFileSelect }: FileTreeProps) {
         onClose={handleCloseContextMenu}
       />
 
-      {showExternalDropDialog && (
+      {showExternalDropDialog && pendingDropInfo && (
         <ExternalDropDialog
           files={externalDropFiles}
+          destName={pendingDropInfo.destPath.split('\\').pop() || 'root'}
           onCopy={handleExternalCopy}
           onMove={handleExternalMove}
           onCancel={handleCloseExternalDropDialog}

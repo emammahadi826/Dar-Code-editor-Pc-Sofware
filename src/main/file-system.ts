@@ -14,6 +14,11 @@ function copyRecursive(src: string, dest: string) {
   }
 }
 
+function ensureDir(filePath: string) {
+  const dir = path.dirname(filePath)
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
+}
+
 export function registerFileSystem() {
   ipcMain.handle('fs:readDir', async (_, dirPath: string) => {
     try {
@@ -93,19 +98,23 @@ export function registerFileSystem() {
 
   ipcMain.handle('fs:copyFile', async (_, sourcePath: string, destPath: string) => {
     try {
+      if (!fs.existsSync(sourcePath)) return false
+      ensureDir(destPath)
       copyRecursive(sourcePath, destPath)
       return true
-    } catch {
+    } catch (e) {
       return false
     }
   })
 
   ipcMain.handle('fs:moveFile', async (_, sourcePath: string, destPath: string) => {
     try {
+      if (!fs.existsSync(sourcePath)) return false
+      ensureDir(destPath)
       copyRecursive(sourcePath, destPath)
       fs.rmSync(sourcePath, { recursive: true, force: true })
       return true
-    } catch {
+    } catch (e) {
       return false
     }
   })

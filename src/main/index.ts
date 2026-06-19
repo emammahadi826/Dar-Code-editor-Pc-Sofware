@@ -5,6 +5,7 @@ import { registerWindowControls } from './window-controls'
 import { registerFileSystem } from './file-system'
 import { registerSearchFiles } from './search-files'
 import { registerShellManager } from './shell-manager'
+import { registerFileWatcher } from './file-watcher'
 
 let win: BrowserWindow | null = null
 
@@ -63,6 +64,7 @@ app.whenReady().then(() => {
   registerFileSystem()
   registerSearchFiles()
   registerShellManager()
+  registerFileWatcher()
 })
 
 app.on('window-all-closed', () => {

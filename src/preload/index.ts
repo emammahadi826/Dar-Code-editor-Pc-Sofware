@@ -32,6 +32,15 @@ contextBridge.exposeInMainWorld('electron', {
   searchInFiles: (p: { rootPath: string; query: string; caseSensitive?: boolean; maxResults?: number }) =>
     ipcRenderer.invoke('search:inFiles', p),
 
+  // File watcher
+  watchDir: (dirPath: string) => ipcRenderer.invoke('fs:watchDir', dirPath),
+  unwatchDir: () => ipcRenderer.invoke('fs:unwatchDir'),
+  onFilesChanged: (callback: () => void) => {
+    const handler = () => callback()
+    ipcRenderer.on('fs:filesChanged', handler)
+    return () => ipcRenderer.removeListener('fs:filesChanged', handler)
+  },
+
   // Shell / Clipboard
   revealInExplorer: (targetPath: string) => ipcRenderer.invoke('shell:revealInExplorer', targetPath),
   copyToClipboard: (text: string) => ipcRenderer.invoke('app:copyToClipboard', text),
