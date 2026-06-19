@@ -23,8 +23,8 @@ interface FileTreeNodeProps {
   creating: { parentPath: string; type: 'file' | 'folder' } | null
   onCreateSubmit: (name: string) => void
   onCancelCreate: () => void
-  selectedPath: string | null
-  onSelect: (path: string) => void
+  selectedPaths: Set<string>
+  onSelect: (path: string, multi?: boolean) => void
   refreshKey: number
   onContextMenu?: (e: React.MouseEvent, entry: FileEntry) => void
   draggedPath: string | null
@@ -99,7 +99,7 @@ export function FileTreeNode({
   expandedDirs, onToggle, onFileSelect,
   onCreateFile, onCreateFolder, onRename, onDelete,
   creating, onCreateSubmit, onCancelCreate,
-  selectedPath, onSelect, refreshKey,
+  selectedPaths, onSelect, refreshKey,
   onContextMenu,
   draggedPath, renaming, dropState,
   onDragStart, onDragEnd, onDragOver, onDragLeave, onDrop,
@@ -128,13 +128,14 @@ export function FileTreeNode({
     }
   }, [refreshKey])
 
-  const handleClick = () => {
+  const handleClick = (e: React.MouseEvent) => {
+    const multi = e.ctrlKey || e.metaKey
     if (entry.isDirectory) {
       onToggle(entry.path, isExpanded)
     } else {
-      onFileSelect(entry.path, entry.name)
+      if (!multi) onFileSelect(entry.path, entry.name)
     }
-    onSelect(entry.path)
+    onSelect(entry.path, multi)
   }
 
   const handleCreateClick = useCallback((type: 'file' | 'folder') => {
@@ -209,7 +210,7 @@ export function FileTreeNode({
     onDrop(entry, position, e)
   }, [draggedPath, entry, onDrop])
 
-  const isSelected = entry.path === selectedPath
+  const isSelected = selectedPaths.has(entry.path)
   const isCreatingHere = creating?.parentPath === entry.path
   const isDragging = draggedPath === entry.path
   const isDropTarget = dropState?.targetPath === entry.path
@@ -375,7 +376,7 @@ export function FileTreeNode({
           creating={creating}
           onCreateSubmit={onCreateSubmit}
           onCancelCreate={onCancelCreate}
-          selectedPath={selectedPath}
+           selectedPaths={selectedPaths}
           onSelect={onSelect}
           refreshKey={refreshKey}
           onContextMenu={onContextMenu}

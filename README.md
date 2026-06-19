@@ -38,7 +38,10 @@ Dar Studio is a full-featured code editor for Windows, built from the ground up 
 - **Tree connecting lines** — Indent guides with vertical lines and L-shaped connectors showing folder hierarchy (VS Code-style)
 - **Binary file detection** — Detects binary files (.exe, .apk, .dll, .wasm, .pyc, etc.) and shows a warning with "Open Anyway" button instead of garbled text
 - **Drag-and-drop moving** — Drag files/folders to move them within the tree with visual drop indicators
-- **External drag-and-drop** — Drag files/folders from Windows File Explorer (or any OS app) into the file tree to move them into the workspace; "Drop here" overlay with visual feedback
+- **External drag-and-drop** — Drag files/folders from Windows File Explorer (or any OS app) into the file tree; Copy/Move dialog with animated popup
+- **Keyboard shortcuts** — Ctrl+C/X/V (copy/cut/paste), Delete, F2 (rename), Enter (open), Ctrl+A (select all), Ctrl+Shift+N (new file) — works globally from anywhere
+- **Multi-select** — Ctrl+click to toggle selection on multiple files/folders
+- **Unique name generation** — Paste with duplicate name auto-generates "filename - Copy.ext", "filename - Copy (2).ext"
 - **Drag region** — Title bar is fully draggable
 
 ### Context Menu
@@ -250,6 +253,14 @@ dar-studio/
 | `Ctrl+C` | Terminal copy (if selected) / SIGINT |
 | `F3` | Terminal search next |
 | `Shift+F3` | Terminal search previous |
+| `Ctrl+C` (file tree) | Copy selected file/folder |
+| `Ctrl+X` (file tree) | Cut selected file/folder |
+| `Ctrl+V` (file tree) | Paste from clipboard (copy or move) |
+| `Ctrl+A` (file tree) | Select all root entries |
+| `Delete` (file tree) | Delete selected file/folder |
+| `F2` (file tree) | Rename selected |
+| `Enter` (file tree) | Open file |
+| `Ctrl+Shift+N` (file tree) | New file |
 
 <br>
 
@@ -283,9 +294,19 @@ A chronological list of bugs and issues resolved during development.
 | **Blank panel rendering** | Moved `useCallback` hooks before `if (loading)` early return to fix React Rules of Hooks violation |
 | **Blank space deselection** | Replaced `e.stopPropagation()` with `data-file-row` attribute + `closest()` detection — clicking empty space deselects while file row clicks remain functional |
 
+### Splash Screen / Video
+| Fix | Description |
+|-----|-------------|
+| **Chroma key green fringes** | Relaxed threshold from `g > r+30 && g > b+30` to `g > r+20 && g > b+20 && r<120 && b<120` — catches compression artifacts around video edges |
+| **Canvas fade-in** | Added `opacity: 0` + `.visible` class with 0.6s CSS transition instead of sudden pop |
+| **Video size reduction** | Changed from 65vw/800px to 40vw/450px, adjusted title/sub/bar spacing |
+
 ### File System
 | Fix | Description |
 |-----|-------------|
+| **Copy/Move for directories** | Added `copyRecursive()` helper that handles folders + files; `fs:moveFile` uses `rmSync` for complete source removal |
+| **Copy/Move source validation** | Added `fs.existsSync()` check + `ensureDir()` before any copy/move operation — prevents silent failures |
+| **File watcher (auto-refresh)** | New `file-watcher.ts` module — `fs.watch` with `recursive: true` + 300ms debounce, sends `fs:filesChanged` IPC to renderer |
 | **Nested file/folder creation** | Creation input now renders inline inside the selected directory via `creating` prop instead of root level only |
 | **Children not refreshing after nested create** | Added `refreshKey` prop propagation to `FileTreeNode` — triggers `loadChildren()` re-run when `refreshKey` changes |
 | **File selection highlight** | Added `selectedPath` state in `FileTree`, visual highlight via `bg-active` class |
@@ -348,15 +369,35 @@ A chronological list of bugs and issues resolved during development.
 
 **Splash Screen**
 - **Video splash**: Custom 8.33s 1080×1080 video plays on startup with Canvas 2D rendering
-- **Chroma key removal**: Pixel-level green-screen removal (`g > r+30 && g > b+30 → alpha=0`) for transparent overlay
+- **Chroma key removal**: Pixel-level green-screen removal (`g > r+20 && g > b+20 && r<120 && b<120 → alpha=0`) for transparent overlay
 - **Frame skip optimization**: Renders every 3rd frame (~20fps) for ~66% CPU reduction
+- **Canvas fade-in**: CSS opacity transition 0.6s instead of sudden appearance
 - **Auto-dismiss**: Hides immediately on `ended` event with fallback `duration + 3000ms` timeout
 - **Watermark concealment**: Green rectangle overlay hides source watermark during processing
 
-**External Drag-and-Drop**
-- Drag files/folders from Windows File Explorer into file tree to move them into the workspace
-- Cross-drive support via `copyFileSync + unlinkSync` fallback
-- "Drop here" visual overlay with opacity transition
+**File Watcher (Auto-Refresh)**
+- Real-time file system watching via `fs.watch` with `recursive: true`
+- **Instant file tree updates** when files are added/deleted/renamed externally (VS Code-style)
+- 300ms debounce to batch rapid changes
+- Auto-cleans up on workspace switch
+
+**Keyboard Shortcuts (File Tree)**
+- **Ctrl+C / Ctrl+X**: Copy / Cut selected files and folders
+- **Ctrl+V**: Paste — duplicate (copy) or move (cut) with smart unique name generation
+- **Ctrl+A**: Select all root entries
+- **Delete**: Delete selected file/folder
+- **F2**: Rename selected file/folder
+- **Enter**: Open selected file in editor
+- **Ctrl+Shift+N**: New file in selected folder or root
+- **Global keydown listener** — shortcuts work from anywhere (editor, terminal, etc.), just like VS Code
+- **Multi-select support** — Ctrl+click to toggle multiple selections; operations apply to all selected
+
+**External Drag-and-Drop (Copy/Move Dialog)**
+- Drag files/folders from Windows Explorer into file tree
+- **Copy or Move?** popup with animated dialog: Copy duplicates, Move transfers with source deletion
+- Recursive directory support for both operations
+- Loading spinner during operation, buttons disabled while processing
+- Smart source validation before copy/move
 
 **Menu Bar**
 - **Refresh button**: Added in Help section — reloads the entire renderer process
@@ -372,9 +413,16 @@ A chronological list of bugs and issues resolved during development.
 - **Search Addon**: Ctrl+Shift+F toggles search bar, Enter/Shift+Enter/F3 navigation, result counter
 - **Scrollback 5000** and **alt-click cursor move**
 
+**AGENTS.md**
+- Added project-level `AGENTS.md` with full architecture, gotchas, splash details, drag-drop docs, icon paths, store quirks
+
 **Bug Fixes**
 - **Blank panel fix**: Moved `useCallback` hooks before `if (loading)` early return to fix React Rules of Hooks violation
 - **Blank space deselection**: Replaced `stopPropagation` with `data-file-row` + `closest()` detection — clicking empty space deselects while file row clicks remain functional
+- **Chroma key green fringes**: Threshold relaxed from `g > r+30 && g > b+30` to `g > r+20 && g > b+20 && r<120 && b<120` — catches compression artifacts
+- **Copy/Move for directories**: `copyRecursive()` handles folders; `fs:moveFile` uses `rmSync` for complete removal
+- **Copy/Move source validation**: Added `fs.existsSync()` check + `ensureDir()` before any operation
+- **External drop dialog polish**: fade-scale animation, loading spinner, disabled buttons during operation
 
 ### v1.1.0
 *New features and improvements over v1.0.0:*

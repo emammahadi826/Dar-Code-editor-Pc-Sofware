@@ -31,7 +31,7 @@ export function FileTree({ rootPath, onFileSelect }: FileTreeProps) {
     action: 'copy' | 'cut'
   } | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
-  const [selectedPath, setSelectedPath] = useState<string | null>(null)
+  const [selectedPaths, setSelectedPaths] = useState<Set<string>>(new Set())
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; entry: FileEntry } | null>(null)
   const [draggedPath, setDraggedPath] = useState<string | null>(null)
   const [dropState, setDropState] = useState<DropState | null>(null)
@@ -73,17 +73,27 @@ export function FileTree({ rootPath, onFileSelect }: FileTreeProps) {
     setExpandedDirs(next)
   }, [expandedDirs])
 
-  const handleSelect = useCallback((path: string) => {
-    setSelectedPath(path)
+  const handleSelect = useCallback((path: string, multi?: boolean) => {
+    if (multi) {
+      setSelectedPaths((prev) => {
+        const next = new Set(prev)
+        if (next.has(path)) next.delete(path)
+        else next.add(path)
+        return next
+      })
+    } else {
+      setSelectedPaths(new Set([path]))
+    }
   }, [])
 
   const getCreateParent = useCallback(() => {
-    if (selectedPath) {
-      const entry = entries.find(e => e.path === selectedPath)
-      if (entry?.isDirectory) return selectedPath
+    const firstSel = selectedPaths.values().next().value
+    if (firstSel) {
+      const entry = entries.find(e => e.path === firstSel)
+      if (entry?.isDirectory) return firstSel
     }
     return rootPath
-  }, [selectedPath, entries, rootPath])
+  }, [selectedPaths, entries, rootPath])
 
   const handleCreateFile = useCallback(async (parentPath: string) => {
     setCreating({ parentPath, type: 'file' })
@@ -320,18 +330,20 @@ export function FileTree({ rootPath, onFileSelect }: FileTreeProps) {
   }, [clipboard])
 
   const handleCopy = useCallback(() => {
-    if (!selectedPath) return
-    setClipboard({ paths: [selectedPath], action: 'copy' })
-    const name = selectedPath.split('\\').pop()
-    addOutputLog(`[Clipboard] Copied: ${name}`)
-  }, [selectedPath, addOutputLog])
+    const paths = Array.from(selectedPaths)
+    if (paths.length === 0) return
+    setClipboard({ paths, action: 'copy' })
+    const label = paths.length === 1 ? paths[0].split('\\').pop() : `${paths.length} items`
+    addOutputLog(`[Clipboard] Copied: ${label}`)
+  }, [selectedPaths, addOutputLog])
 
   const handleCut = useCallback(() => {
-    if (!selectedPath) return
-    setClipboard({ paths: [selectedPath], action: 'cut' })
-    const name = selectedPath.split('\\').pop()
-    addOutputLog(`[Clipboard] Cut: ${name}`)
-  }, [selectedPath, addOutputLog])
+    const paths = Array.from(selectedPaths)
+    if (paths.length === 0) return
+    setClipboard({ paths, action: 'cut' })
+    const label = paths.length === 1 ? paths[0].split('\\').pop() : `${paths.length} items`
+    addOutputLog(`[Clipboard] Cut: ${label}`)
+  }, [selectedPaths, addOutputLog])
 
   const getUniquePath = useCallback(async (basePath: string): Promise<string> => {
     const exists = await window.electron?.exists(basePath)
@@ -362,10 +374,11 @@ export function FileTree({ rootPath, onFileSelect }: FileTreeProps) {
 
   const handlePaste = useCallback(async () => {
     if (!clipboard || clipboard.paths.length === 0) return
-    const targetDir = selectedPath && entries.find(e => e.path === selectedPath)?.isDirectory
-      ? selectedPath
-      : selectedPath
-        ? selectedPath.substring(0, selectedPath.lastIndexOf('\\'))
+    const firstSel = selectedPaths.values().next().value
+    const targetDir = firstSel && entries.find(e => e.path === firstSel)?.isDirectory
+      ? firstSel
+      : firstSel
+        ? firstSel.substring(0, firstSel.lastIndexOf('\\'))
         : rootPath
     const destName = targetDir.split('\\').pop() || 'root'
     let successCount = 0
@@ -398,94 +411,97 @@ export function FileTree({ rootPath, onFileSelect }: FileTreeProps) {
     }
     if (clipboard.action === 'cut') setClipboard(null)
     if (successCount > 0) setRefreshKey((k) => k + 1)
-  }, [clipboard, selectedPath, entries, rootPath, addOutputLog, getUniquePath])
+  }, [clipboard, selectedPaths, entries, rootPath, addOutputLog, getUniquePath])
 
   const handleClearClipboard = useCallback(() => {
     setClipboard(null)
   }, [])
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    const target = e.target as HTMLElement
-    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return
-
-    const isCtrl = e.ctrlKey || e.metaKey
-    const isShift = e.shiftKey
-
-    if (isCtrl && isShift && e.key === 'N') {
-      e.preventDefault()
-      const parent = selectedPath && entries.find(ent => ent.path === selectedPath)?.isDirectory
-        ? selectedPath
-        : rootPath
-      handleCreateFile(parent)
-      return
-    }
-
-    if (isCtrl && isShift && e.key === 'F') {
-      e.preventDefault()
-      // Ctrl+Shift+F is already globally handled for search
-      return
-    }
-
-    if (isCtrl && e.key === 'c') {
-      e.preventDefault()
-      handleCopy()
-      return
-    }
-
-    if (isCtrl && e.key === 'x') {
-      e.preventDefault()
-      handleCut()
-      return
-    }
-
-    if (isCtrl && e.key === 'v') {
-      e.preventDefault()
-      handlePaste()
-      return
-    }
-
-    if (isCtrl && e.key === 'a') {
-      e.preventDefault()
-      if (entries.length > 0) {
-        setSelectedPath(entries[0].path)
-      }
-      return
-    }
-
-    if (e.key === 'Delete' || e.key === 'Del') {
-      if (selectedPath) {
-        e.preventDefault()
-        handleDelete(selectedPath)
-      }
-      return
-    }
-
-    if (e.key === 'F2') {
-      if (selectedPath) {
-        e.preventDefault()
-        const entry = entries.find(ent => ent.path === selectedPath)
-        if (entry) handleRename(entry.path, entry.name)
-      }
-      return
-    }
-
-    if (e.key === 'Enter') {
-      if (selectedPath) {
-        e.preventDefault()
-        const entry = entries.find(ent => ent.path === selectedPath)
-        if (entry && !entry.isDirectory) {
-          const name = entry.path.split('\\').pop() || entry.path.split('/').pop() || ''
-          onFileSelect(entry.path, name)
-        }
-      }
-      return
-    }
-  }, [selectedPath, entries, rootPath, handleCopy, handleCut, handlePaste, handleDelete, handleRename, handleCreateFile, onFileSelect])
-
   const treeRef = useRef<HTMLDivElement>(null)
+
+  // Global keyboard shortcuts — work from anywhere (VS Code style)
   useEffect(() => {
-    treeRef.current?.focus()
-  }, [rootPath])
+    const handler = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement
+      if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable) return
+
+      const isCtrl = e.ctrlKey || e.metaKey
+      const pathsArr = Array.from(selectedPaths)
+
+      if (isCtrl && e.shiftKey && e.key === 'N') {
+        e.preventDefault()
+        const firstSel = pathsArr[0]
+        const parent = firstSel && entries.find(ent => ent.path === firstSel)?.isDirectory
+          ? firstSel
+          : rootPath
+        handleCreateFile(parent)
+        return
+      }
+
+      if (isCtrl && e.key === 'c') {
+        e.preventDefault()
+        if (pathsArr.length > 0) handleCopy()
+        return
+      }
+
+      if (isCtrl && e.key === 'x') {
+        e.preventDefault()
+        if (pathsArr.length > 0) handleCut()
+        return
+      }
+
+      if (isCtrl && e.key === 'v') {
+        e.preventDefault()
+        handlePaste()
+        return
+      }
+
+      if (isCtrl && e.key === 'a') {
+        e.preventDefault()
+        if (entries.length > 0) {
+          setSelectedPaths(new Set(entries.filter(e => !e.isDirectory).map(e => e.path)))
+          if (!entries[0].isDirectory && entries[0].path) {
+            treeRef.current?.focus()
+          }
+        }
+        return
+      }
+
+      if (e.key === 'Delete' || e.key === 'Del') {
+        const firstSel = pathsArr[0]
+        if (firstSel) {
+          e.preventDefault()
+          handleDelete(firstSel)
+        }
+        return
+      }
+
+      if (e.key === 'F2') {
+        const firstSel = pathsArr[0]
+        if (firstSel) {
+          e.preventDefault()
+          const entry = entries.find(ent => ent.path === firstSel)
+          if (entry) handleRename(entry.path, entry.name)
+        }
+        return
+      }
+
+      if (e.key === 'Enter') {
+        const firstSel = pathsArr[0]
+        if (firstSel) {
+          e.preventDefault()
+          const entry = entries.find(ent => ent.path === firstSel)
+          if (entry && !entry.isDirectory) {
+            const name = entry.path.split('\\').pop() || entry.path.split('/').pop() || ''
+            onFileSelect(entry.path, name)
+          }
+        }
+        return
+      }
+    }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [selectedPaths, entries, rootPath, handleCopy, handleCut, handlePaste, handleDelete, handleRename, handleCreateFile, onFileSelect])
 
   const getEntryParentPath = useCallback((entry: FileEntry): string => {
     return entry.path.substring(0, entry.path.lastIndexOf('\\'))
@@ -571,7 +587,7 @@ export function FileTree({ rootPath, onFileSelect }: FileTreeProps) {
   const handleContainerClick = useCallback((e: React.MouseEvent) => {
     const target = e.target as HTMLElement
     if (!target.closest('[data-file-row]')) {
-      setSelectedPath(null)
+      setSelectedPaths(new Set())
     }
   }, [])
 
@@ -582,9 +598,8 @@ export function FileTree({ rootPath, onFileSelect }: FileTreeProps) {
   return (
       <div
         ref={treeRef}
-        tabIndex={0}
+        tabIndex={-1}
         className={`text-sm h-full flex flex-col overflow-y-auto outline-none ${externalDropOver ? 'bg-accent-blue/5' : ''}`}
-        onKeyDown={handleKeyDown}
         onDragOver={(e) => {
           e.preventDefault()
           if (!draggedPath && e.dataTransfer.types.includes('Files')) {
@@ -687,7 +702,7 @@ export function FileTree({ rootPath, onFileSelect }: FileTreeProps) {
           creating={creating}
           onCreateSubmit={handleCreateSubmit}
           onCancelCreate={() => setCreating(null)}
-          selectedPath={selectedPath}
+          selectedPaths={selectedPaths}
           onSelect={handleSelect}
           refreshKey={refreshKey}
           onContextMenu={handleContextMenu}
