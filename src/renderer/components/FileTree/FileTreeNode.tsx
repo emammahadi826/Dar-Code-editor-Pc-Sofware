@@ -159,9 +159,20 @@ export function FileTreeNode({
   }, [entry, onDragStart])
 
   const handleDragOverEvent = useCallback((e: React.DragEvent) => {
-    if (!draggedPath || draggedPath === entry.path) return
+    if (draggedPath === entry.path) return
+
+    const isExternal = !draggedPath && e.dataTransfer.types.includes('Files')
+    if (!isExternal && !draggedPath) return
+
     e.preventDefault()
     e.stopPropagation()
+
+    if (isExternal) {
+      if (entry.isDirectory) {
+        onDragOver(entry, 'inside')
+      }
+      return
+    }
 
     const rect = e.currentTarget.getBoundingClientRect()
     const y = e.clientY - rect.top
@@ -187,7 +198,10 @@ export function FileTreeNode({
   }, [onDragLeave])
 
   const handleDropEvent = useCallback((e: React.DragEvent) => {
-    if (!draggedPath) return
+    const isExternal = !draggedPath && e.dataTransfer.types.includes('Files')
+    if (!isExternal && !draggedPath) return
+    if (isExternal && !entry.isDirectory) return
+
     e.preventDefault()
     e.stopPropagation()
 

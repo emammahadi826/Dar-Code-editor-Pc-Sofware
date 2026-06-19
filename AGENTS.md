@@ -71,3 +71,4 @@ No lint/typecheck/test scripts — build is the only verification.
 - **Tone**: casual, no greetings/formalities needed. Straight to the point.
 - **This file is THE source** — all instructions the user gives go here. Always check this first before responding.
 - **Response style**: answer concisely in Banglish, use code/repo terms as-is (don't translate technical terms), use short sentences.
+- **NO auto-push**: kichu push/publish/commit korte must ask permission first. NEVER push without explicit "push koro" / "push" instruction.
