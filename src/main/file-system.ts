@@ -2,6 +2,18 @@ import { ipcMain, dialog, app, shell, clipboard } from 'electron'
 import fs from 'fs'
 import path from 'path'
 
+function copyRecursive(src: string, dest: string) {
+  const stat = fs.statSync(src)
+  if (stat.isDirectory()) {
+    fs.mkdirSync(dest, { recursive: true })
+    for (const entry of fs.readdirSync(src)) {
+      copyRecursive(path.join(src, entry), path.join(dest, entry))
+    }
+  } else {
+    fs.copyFileSync(src, dest)
+  }
+}
+
 export function registerFileSystem() {
   ipcMain.handle('fs:readDir', async (_, dirPath: string) => {
     try {
@@ -79,12 +91,19 @@ export function registerFileSystem() {
     }
   })
 
+  ipcMain.handle('fs:copyFile', async (_, sourcePath: string, destPath: string) => {
+    try {
+      copyRecursive(sourcePath, destPath)
+      return true
+    } catch {
+      return false
+    }
+  })
+
   ipcMain.handle('fs:moveFile', async (_, sourcePath: string, destPath: string) => {
     try {
-      const dir = path.dirname(destPath)
-      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
-      fs.copyFileSync(sourcePath, destPath)
-      fs.unlinkSync(sourcePath)
+      copyRecursive(sourcePath, destPath)
+      fs.rmSync(sourcePath, { recursive: true, force: true })
       return true
     } catch {
       return false

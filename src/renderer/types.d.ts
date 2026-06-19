@@ -54,6 +54,7 @@ export interface ElectronAPI {
   createDir: (dirPath: string) => Promise<boolean>
   delete: (targetPath: string) => Promise<boolean>
   rename: (oldPath: string, newPath: string) => Promise<boolean>
+  copyFile: (sourcePath: string, destPath: string) => Promise<boolean>
   moveFile: (sourcePath: string, destPath: string) => Promise<boolean>
   exists: (targetPath: string) => Promise<boolean>
 

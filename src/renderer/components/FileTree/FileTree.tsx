@@ -5,6 +5,7 @@ import { useAppStore } from '../../store/appStore'
 import { useTerminalStore } from '../../store/terminalStore'
 import { ContextMenuPortal, ContextMenuItem } from '../ContextMenu/ContextMenuPortal'
 import { buildContextMenuItems, ContextMenuCallbacks } from './contextMenuItems'
+import { ExternalDropDialog } from './ExternalDropDialog'
 import { Icon } from '@iconify/react'
 import { Plus, FolderPlus, RotateCw } from 'lucide-react'
 
@@ -31,6 +32,12 @@ export function FileTree({ rootPath, onFileSelect }: FileTreeProps) {
   const [draggedPath, setDraggedPath] = useState<string | null>(null)
   const [dropState, setDropState] = useState<DropState | null>(null)
   const [externalDropOver, setExternalDropOver] = useState(false)
+  const [externalDropFiles, setExternalDropFiles] = useState<{ name: string; path: string }[]>([])
+  const [showExternalDropDialog, setShowExternalDropDialog] = useState(false)
+  const [pendingDropInfo, setPendingDropInfo] = useState<{
+    entries: { name: string; path: string }[]
+    destPath: string
+  } | null>(null)
 
   const loadEntries = useCallback(async (dirPath: string) => {
     if (!window.electron) return
@@ -148,21 +155,23 @@ export function FileTree({ rootPath, onFileSelect }: FileTreeProps) {
 
   const handleDrop = useCallback(async (targetEntry: FileEntry, position: 'before' | 'after' | 'inside', e: React.DragEvent) => {
     if (e.dataTransfer.files.length > 0) {
-      // External drop
+      // External drop — show dialog
       e.preventDefault()
       const newParent = position === 'inside' && targetEntry.isDirectory
         ? targetEntry.path
         : getEntryParentPath(targetEntry.path)
-      for (const file of Array.from(e.dataTransfer.files)) {
-        const srcPath = (file as any).path
-        const destPath = newParent + '\\' + file.name
-        if (srcPath && srcPath !== destPath) {
-          await window.electron?.moveFile(srcPath, destPath)
-          addOutputLog(`[FS] Moved: ${file.name} → ${newParent.split('\\').pop()}`)
-        }
+      const files = Array.from(e.dataTransfer.files)
+        .map((f) => ({ name: f.name, path: (f as any).path }))
+        .filter((f) => f.path && f.path !== newParent + '\\' + f.name)
+      if (files.length === 0) {
+        setDropState(null)
+        return
       }
+      setExternalDropFiles(files)
+      setPendingDropInfo({ entries: files, destPath: newParent })
+      setShowExternalDropDialog(true)
+      setExternalDropOver(false)
       setDropState(null)
-      setRefreshKey((k) => k + 1)
       return
     }
 
@@ -223,15 +232,13 @@ export function FileTree({ rootPath, onFileSelect }: FileTreeProps) {
     setExternalDropOver(false)
 
     if (e.dataTransfer.files.length > 0) {
-      for (const file of Array.from(e.dataTransfer.files)) {
-        const srcPath = (file as any).path
-        const destPath = rootPath + '\\' + file.name
-        if (srcPath && srcPath !== destPath) {
-          await window.electron?.moveFile(srcPath, destPath)
-          addOutputLog(`[FS] Moved: ${file.name} → root`)
-        }
-      }
-      setRefreshKey((k) => k + 1)
+      const files = Array.from(e.dataTransfer.files)
+        .map((f) => ({ name: f.name, path: (f as any).path }))
+        .filter((f) => f.path && f.path !== rootPath + '\\' + f.name)
+      if (files.length === 0) return
+      setExternalDropFiles(files)
+      setPendingDropInfo({ entries: files, destPath: rootPath })
+      setShowExternalDropDialog(true)
       return
     }
 
@@ -253,6 +260,42 @@ export function FileTree({ rootPath, onFileSelect }: FileTreeProps) {
     setDropState(null)
     setRefreshKey((k) => k + 1)
   }, [draggedPath, rootPath, addOutputLog])
+
+  const handleExternalCopy = useCallback(async () => {
+    if (!pendingDropInfo) return
+    const { entries, destPath } = pendingDropInfo
+    const destName = destPath.split('\\').pop() || 'root'
+    for (const file of entries) {
+      const destFilePath = destPath + '\\' + file.name
+      await window.electron?.copyFile(file.path, destFilePath)
+      addOutputLog(`[FS] Copied: ${file.name} → ${destName}`)
+    }
+    setShowExternalDropDialog(false)
+    setExternalDropFiles([])
+    setPendingDropInfo(null)
+    setRefreshKey((k) => k + 1)
+  }, [pendingDropInfo, addOutputLog])
+
+  const handleExternalMove = useCallback(async () => {
+    if (!pendingDropInfo) return
+    const { entries, destPath } = pendingDropInfo
+    const destName = destPath.split('\\').pop() || 'root'
+    for (const file of entries) {
+      const destFilePath = destPath + '\\' + file.name
+      await window.electron?.moveFile(file.path, destFilePath)
+      addOutputLog(`[FS] Moved: ${file.name} → ${destName}`)
+    }
+    setShowExternalDropDialog(false)
+    setExternalDropFiles([])
+    setPendingDropInfo(null)
+    setRefreshKey((k) => k + 1)
+  }, [pendingDropInfo, addOutputLog])
+
+  const handleCloseExternalDropDialog = useCallback(() => {
+    setShowExternalDropDialog(false)
+    setExternalDropFiles([])
+    setPendingDropInfo(null)
+  }, [])
 
   const getEntryParentPath = useCallback((entry: FileEntry): string => {
     return entry.path.substring(0, entry.path.lastIndexOf('\\'))
@@ -495,6 +538,15 @@ export function FileTree({ rootPath, onFileSelect }: FileTreeProps) {
         items={ctxMenuItems}
         onClose={handleCloseContextMenu}
       />
+
+      {showExternalDropDialog && (
+        <ExternalDropDialog
+          files={externalDropFiles}
+          onCopy={handleExternalCopy}
+          onMove={handleExternalMove}
+          onCancel={handleCloseExternalDropDialog}
+        />
+      )}
     </div>
   )
 }
