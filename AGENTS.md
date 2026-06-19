@@ -63,3 +63,11 @@ No lint/typecheck/test scripts — build is the only verification.
 - `appStore.ts`: `openFile(path, name, content, language, fileType?, mediaUrl?)`; tabs have `isDirty`, `language`, `fileType`, `mediaUrl`; `detectLanguage()` maps 30+ extensions
 - `settingsStore.ts`: individual setters (`setFontSize`, etc.) — NOT generic `.set()`
 - `terminalStore.ts`: `splitTerminal()`, `closeSplit()`, `setSplitSizes()` for split-pane management; `createNamed` IPC supports custom name + cwd
+
+## Communication
+- **Language**: ALWAYS Banglish (Bangla romanized in English script). NEVER pure Bangla, NEVER pure English.
+- **User's style**: short imperative commands, direct, minimal formalities. Mixes code terminology with Banglish.
+- **Phrases they use**: "koro/kori/koren" (do), "hocche" (is/are), "jokhon/tokhon" (when/then), "jemon" (for example), "tahole" (then/so), "tah hocche" (the thing is), "jate" (so that), "amon" (like this), "kintu" (but)
+- **Tone**: casual, no greetings/formalities needed. Straight to the point.
+- **This file is THE source** — all instructions the user gives go here. Always check this first before responding.
+- **Response style**: answer concisely in Banglish, use code/repo terms as-is (don't translate technical terms), use short sentences.

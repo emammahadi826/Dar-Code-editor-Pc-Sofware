@@ -63,10 +63,12 @@ export default function App() {
               <Panel
                 panelRef={sidebarRef}
                 id="sidebar"
-                defaultSize={22}
-                minSize={8}
+                defaultSize={300}
+                minSize={180}
+                maxSize={600}
                 collapsedSize={0}
                 collapsible
+                groupResizeBehavior="preserve-pixel-size"
                 onResize={handleSideResize}
               >
                 <SidePanel />
