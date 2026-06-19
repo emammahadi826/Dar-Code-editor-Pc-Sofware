@@ -16,6 +16,8 @@ const BINARY_EXTENSIONS = new Set([
   'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
   'ttf', 'otf', 'woff', 'woff2', 'eot',
   'cur',
+  'zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz', 'zst', 'tgz',
+  'psd', 'ai', 'indd', 'sketch', 'fig',
 ])
 
 export type FileType = 'code' | 'image' | 'video' | 'binary'

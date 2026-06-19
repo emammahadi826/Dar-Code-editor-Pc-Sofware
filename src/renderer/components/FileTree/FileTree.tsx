@@ -459,7 +459,7 @@ export function FileTree({ rootPath, onFileSelect }: FileTreeProps) {
       if (isCtrl && e.key === 'a') {
         e.preventDefault()
         if (entries.length > 0) {
-          setSelectedPaths(new Set(entries.filter(e => !e.isDirectory).map(e => e.path)))
+          setSelectedPaths(new Set(entries.map(e => e.path)))
           if (!entries[0].isDirectory && entries[0].path) {
             treeRef.current?.focus()
           }
