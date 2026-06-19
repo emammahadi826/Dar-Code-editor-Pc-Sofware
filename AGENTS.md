@@ -16,7 +16,7 @@ No lint/typecheck/test scripts — build is the only verification.
 - Main process: `index.ts` creates frameless window, registers IPC handlers
 - Preload: `contextBridge.exposeInMainWorld('electron', {...})` — all IPC flows through `window.electron`
 - Renderer: React app with 5 activity modules — Files (real), Search (real), Settings (real), Git (placeholder), Extensions (placeholder)
-- Zustand stores (`appStore.ts`, `settingsStore.ts`, `terminalStore.ts`) are **in-memory only** — no persistence (only last-opened folder via Electron `userData`)
+- `appStore.ts` and `settingsStore.ts` persist via Electron `userData` (JSON files, sync IPC). `terminalStore.ts` is **in-memory only**
 - Windows-only — `\` hardcoded throughout, no platform branching
 
 ## Gotchas
@@ -32,6 +32,10 @@ No lint/typecheck/test scripts — build is the only verification.
 - `terminalStore.ts` uses tree-based split architecture (`SplitNode`/`SplitGroup`/`SplitLeaf`) — NOT a flat array
 - Git/Extensions modules show "coming soon" placeholders
 - Version displayed in StatusBar, Settings/About, MenuBar Help — all `v1.1.1`
+- Panel resize: `App.tsx` handler gula RAF-throttled + `sidePanelOpen`/`bottomPanelOpen` set kore na — sudhu size persist kore. Resize e panel collapse/expand hoy na
+- Panel position persist: `onFinishHydration` e 1-bar `resize()` call — no key re-mount, no flash
+- Tab content restore: `App.tsx` mount e `readFile()` → `restoreTabContent()` — restart korleo tab content thake
+- Editor layout: `ResizeObserver` in `Editor/index.tsx` → `editor.layout()` on container resize — minimap glitch fix
 
 ## Splash screen
 - Video at `src/renderer/public/video.mp4` (1080×1080, 8.33s, h264, yuv420p, 1.4 MB)

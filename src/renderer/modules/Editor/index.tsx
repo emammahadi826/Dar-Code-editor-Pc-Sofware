@@ -12,6 +12,7 @@ loader.config({ monaco })
 
 export function EditorModule() {
   const editorRef = useRef<any>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
   const { openTabs, activeTab, updateTabContent, markTabClean, setCursor, closeTab, openFile } = useAppStore()
   const { fontSize, tabSize, wordWrap, minimap, lineNumbers } = useSettingsStore()
   const { saveFile, readFile } = useFileSystem()
@@ -50,6 +51,16 @@ export function EditorModule() {
       updateTabContent(activeTab, value)
     }
   }, [activeTab, updateTabContent])
+
+  useEffect(() => {
+    if (!mounted || !containerRef.current) return
+    const el = containerRef.current
+    const observer = new ResizeObserver(() => {
+      editorRef.current?.layout()
+    })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [mounted])
 
   useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
@@ -111,7 +122,7 @@ export function EditorModule() {
   }
 
   return (
-    <div className="h-full min-h-0">
+    <div className="h-full min-h-0" ref={containerRef}>
       <Editor
         key={activeFile.path}
         height="100%"

@@ -163,6 +163,21 @@ export function registerFileSystem() {
     } catch {}
   })
 
+  ipcMain.on('app:loadState', (event, key: string) => {
+    try {
+      const p = path.join(app.getPath('userData'), `${key}.json`)
+      if (fs.existsSync(p)) { event.returnValue = fs.readFileSync(p, 'utf-8'); return }
+    } catch {}
+    event.returnValue = null
+  })
+
+  ipcMain.on('app:saveState', (_, key: string, value: string) => {
+    try {
+      const p = path.join(app.getPath('userData'), `${key}.json`)
+      fs.writeFileSync(p, value, 'utf-8')
+    } catch {}
+  })
+
   ipcMain.handle('shell:revealInExplorer', async (_, targetPath: string) => {
     try {
       shell.showItemInFolder(targetPath)

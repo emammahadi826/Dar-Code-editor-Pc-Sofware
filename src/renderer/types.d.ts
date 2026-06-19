@@ -65,6 +65,9 @@ export interface ElectronAPI {
   getLastPath: () => Promise<string | null>
   setLastPath: (dirPath: string) => Promise<void>
 
+  loadState: (key: string) => string | null
+  saveState: (key: string, value: string) => void
+
   searchInFiles: (p: { rootPath: string; query: string; caseSensitive?: boolean; maxResults?: number }) => Promise<SearchResult[]>
 
   watchDir: (dirPath: string) => Promise<boolean>

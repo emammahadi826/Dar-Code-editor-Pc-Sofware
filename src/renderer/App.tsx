@@ -14,15 +14,61 @@ export default function App() {
   const bottomPanelOpen = useAppStore((s) => s.bottomPanelOpen)
   const sidebarRef = useRef<PanelImperativeHandle>(null)
   const bottomRef = useRef<PanelImperativeHandle>(null)
+  const sideRAFRef = useRef<number | null>(null)
+  const bottomRAFRef = useRef<number | null>(null)
+  const hydratedRef = useRef(false)
+
+  useEffect(() => {
+    if (useAppStore.persist.hasHydrated()) {
+      applyPersistedSizes()
+    } else {
+      const unsub = useAppStore.persist.onFinishHydration(applyPersistedSizes)
+      return unsub
+    }
+  }, [])
+
+  function applyPersistedSizes() {
+    if (hydratedRef.current) return
+    hydratedRef.current = true
+    const { sidebarWidth, bottomPanelSize, sidePanelOpen, bottomPanelOpen } = useAppStore.getState()
+    requestAnimationFrame(() => {
+      if (sidebarWidth && sidebarRef.current) {
+        const pct = Math.max(9, Math.min(60, sidebarWidth / (window.innerWidth - 56) * 100))
+        sidebarRef.current.resize(pct)
+      }
+      if (bottomPanelSize && bottomRef.current) {
+        const pct = Math.max(5, Math.min(60, bottomPanelSize / (window.innerHeight - 44 - 24) * 100))
+        bottomRef.current.resize(pct)
+      }
+      if (sidePanelOpen) sidebarRef.current?.expand()
+      else sidebarRef.current?.collapse()
+      if (bottomPanelOpen) bottomRef.current?.expand()
+      else bottomRef.current?.collapse()
+    })
+  }
 
   const handleSideResize = useCallback((panelSize: PanelSize, _id: string | number | undefined, prevPanelSize: PanelSize | undefined) => {
     if (!prevPanelSize) return
-    useAppStore.setState({ sidePanelOpen: panelSize.asPercentage >= 1 })
+    if (sideRAFRef.current != null) cancelAnimationFrame(sideRAFRef.current)
+    sideRAFRef.current = requestAnimationFrame(() => {
+      sideRAFRef.current = null
+      const w = Math.round(panelSize.inPixels)
+      if (w !== useAppStore.getState().sidebarWidth) {
+        useAppStore.setState({ sidebarWidth: w })
+      }
+    })
   }, [])
 
   const handleBottomResize = useCallback((panelSize: PanelSize, _id: string | number | undefined, prevPanelSize: PanelSize | undefined) => {
     if (!prevPanelSize) return
-    useAppStore.setState({ bottomPanelOpen: panelSize.asPercentage >= 1 })
+    if (bottomRAFRef.current != null) cancelAnimationFrame(bottomRAFRef.current)
+    bottomRAFRef.current = requestAnimationFrame(() => {
+      bottomRAFRef.current = null
+      const h = Math.round(panelSize.inPixels)
+      if (h !== useAppStore.getState().bottomPanelSize) {
+        useAppStore.setState({ bottomPanelSize: h })
+      }
+    })
   }, [])
 
   useEffect(() => {
@@ -36,6 +82,19 @@ export default function App() {
     if (bottomPanelOpen) bottomRef.current.expand()
     else bottomRef.current.collapse()
   }, [bottomPanelOpen])
+
+  useEffect(() => {
+    const tabs = useAppStore.getState().openTabs
+    for (const tab of tabs) {
+      if (!tab.content && tab.path && window.electron) {
+        window.electron.readFile(tab.path).then(content => {
+          if (content !== null) {
+            useAppStore.getState().restoreTabContent(tab.path, content)
+          }
+        })
+      }
+    }
+  }, [])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -63,7 +122,7 @@ export default function App() {
               <Panel
                 panelRef={sidebarRef}
                 id="sidebar"
-                defaultSize={300}
+                defaultSize={22}
                 minSize={180}
                 maxSize={600}
                 collapsedSize={0}

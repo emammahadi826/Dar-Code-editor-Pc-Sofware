@@ -49,7 +49,7 @@ function hideSplash() {
 }
 
 const canvas = document.getElementById('splash-canvas') as HTMLCanvasElement
-const ctx = canvas?.getContext('2d')
+const ctx = canvas?.getContext('2d', { willReadFrequently: true })
 
 if (canvas && ctx) {
   const video = document.createElement('video')

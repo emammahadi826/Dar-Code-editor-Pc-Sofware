@@ -28,6 +28,9 @@ contextBridge.exposeInMainWorld('electron', {
   getLastPath: () => ipcRenderer.invoke('app:getLastPath'),
   setLastPath: (dirPath: string) => ipcRenderer.invoke('app:setLastPath', dirPath),
 
+  loadState: (key: string) => ipcRenderer.sendSync('app:loadState', key),
+  saveState: (key: string, value: string) => ipcRenderer.send('app:saveState', key, value),
+
   // Search
   searchInFiles: (p: { rootPath: string; query: string; caseSensitive?: boolean; maxResults?: number }) =>
     ipcRenderer.invoke('search:inFiles', p),
